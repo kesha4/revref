@@ -182,3 +182,11 @@ RevRef_v3/
     │   └── work/               verify, plan, fix, final
     └── templates/              CONFIG, STATE, CONTEXT, PLAN, FINDINGS, DECISIONS, JOURNAL, report, task
 ```
+
+## Лицензия
+
+© 2026 [kesha4](https://github.com/kesha4). Набор распространяется по лицензии [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/deed.ru). Полный текст — в файле [LICENSE](LICENSE).
+
+Можно свободно использовать, копировать, изменять и распространять набор, в том числе в коммерческих целях, при условии указания авторства. Укажите автора, ссылку на репозиторий и лицензию и отметьте, если вносили изменения. Например:
+
+> Основано на [RevRef](https://github.com/kesha4/revref) © kesha4, CC BY 4.0. Изменено.
