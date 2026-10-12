@@ -1,7 +1,21 @@
-﻿# Установка RevRef для Claude Code — Windows PowerShell 5.1 и PowerShell 7+ (Windows, macOS, Linux).
-#   ./install.ps1                       — глобально: в $env:CLAUDE_CONFIG_DIR или ~/.claude (доступно во всех проектах)
-#   ./install.ps1 -Project <путь>       — только в указанный проект: <путь>/.claude
-#   ./install.ps1 -Uninstall [-Project <путь>]  — удалить скилл и агентов RevRef
+﻿<#
+.SYNOPSIS
+    Установка RevRef для Claude Code — Windows PowerShell 5.1 и PowerShell 7+ (Windows, macOS, Linux).
+.DESCRIPTION
+    Копирует скилл в <папка конфигурации>/skills/revref и агентов в <папка конфигурации>/agents.
+    Папка конфигурации — $env:CLAUDE_CONFIG_DIR, если задана, иначе ~/.claude; с -Project — <путь>/.claude.
+    Существующая версия скилла сохраняется рядом с суффиксом .bak-<дата>.
+.PARAMETER Project
+    Установить (или удалить) только в указанном проекте: <путь>/.claude.
+.PARAMETER Uninstall
+    Удалить скилл и агентов RevRef. Резервные копии *.bak-* не трогаются.
+.EXAMPLE
+    ./install.ps1
+.EXAMPLE
+    ./install.ps1 -Project ~/work/my-app
+.EXAMPLE
+    ./install.ps1 -Uninstall
+#>
 param(
     [string]$Project,
     [switch]$Uninstall
