@@ -9,7 +9,7 @@ jobs:
     name: Kit self-check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: References, structure, versions, ru/en parity
         run: python3 scripts/check_kit.py
 
@@ -21,7 +21,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Git identity for test repositories
         run: |
           git config --global user.email ci@example.com

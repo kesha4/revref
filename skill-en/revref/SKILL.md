@@ -8,7 +8,7 @@ hooks:
     - matcher: "Bash|PowerShell"
       hooks:
         - type: command
-          command: 'f="__REVREF_SKILL_DIR__/hooks/guard.sh"; if [ -f "$f" ]; then sh "$f"; fi'
+          command: 'f="__REVREF_SKILL_DIR__/hooks/guard.sh"; if [ -f "$f" ]; then sh -c "$(tr -d "\r" < "$f")"; fi'
 ---
 
 # RevRef

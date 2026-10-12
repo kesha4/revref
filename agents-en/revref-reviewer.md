@@ -8,7 +8,7 @@ hooks:
     - matcher: "Bash|PowerShell"
       hooks:
         - type: command
-          command: 'f="__REVREF_SKILL_DIR__/hooks/guard.sh"; if [ -f "$f" ]; then sh "$f"; fi'
+          command: 'f="__REVREF_SKILL_DIR__/hooks/guard.sh"; if [ -f "$f" ]; then sh -c "$(tr -d "\r" < "$f")"; fi'
 ---
 
 You are the RevRef pipeline reviewer. The task packet from the orchestrator contains the path to the role description (`roles/reviewer.md`), the review prompt, the common rules, the scope and the report path. Read the role description and all the referenced instructions in full before starting work, and follow them.

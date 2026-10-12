@@ -31,6 +31,11 @@ for lang in ru en; do
         printf '%s' "$payload" | sh -c "$hook_cmd" >/dev/null 2>&1; code=$?
         [ "$code" -eq 2 ] && ok "[$lang] хук из $(basename "$f") блокирует force-push" || bad "[$lang] хук из $f вернул $code вместо 2"
     done
+    # Хук должен работать и с CRLF-копией guard.sh (git с core.autocrlf=true перепишет её при checkout).
+    sed 's/$/\r/' "$skill/hooks/guard.sh" > "$skill/hooks/guard.crlf" && mv "$skill/hooks/guard.crlf" "$skill/hooks/guard.sh"
+    hook_cmd=$(sed -n "s/^ *command: '\(.*\)'\$/\1/p" "$skill/SKILL.md" | head -1)
+    printf '%s' "$payload" | sh -c "$hook_cmd" >/dev/null 2>&1; code=$?
+    [ "$code" -eq 2 ] && ok "[$lang] хук работает с CRLF-копией guard.sh" || bad "[$lang] CRLF-копия guard.sh: код $code вместо 2"
     [ -f "$skill/CHANGELOG.md" ] && [ -f "$skill/VERSION" ] && ok "[$lang] VERSION и CHANGELOG на месте" || bad "[$lang] нет VERSION или CHANGELOG"
     CLAUDE_CONFIG_DIR="$cfg" sh "$root/install.sh" --lang "$lang" >/dev/null && ls -d "$cfg/skills/revref.bak-"* >/dev/null 2>&1 \
         && ok "[$lang] переустановка сохранила резервную копию" || bad "[$lang] нет резервной копии при переустановке"

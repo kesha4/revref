@@ -8,6 +8,12 @@ Kit versions follow [semantic versioning](https://semver.org/). The current vers
 
 A version has a "Migration" section only if something has to be done to a run already in progress when moving to it. The orchestrator reads it on `resume` if the kit version has changed.
 
+## 3.2.1 — 2026-10-13
+
+- The guard hook works even if git rewrote `guard.sh` with CRLF line endings (Windows with `core.autocrlf=true`, worktrees, fresh clones).
+- `install.sh` sets the hook path in the agent files even when the install path contains spaces.
+- CI: test for a CRLF copy of the hook; `actions/checkout@v5`.
+
 ## 3.2.0 — 2026-10-13
 
 - **Secrets:** values of keys, tokens, passwords and personal data never go into reports, decisions, commits or the chat — only the location and a masked form.

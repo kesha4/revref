@@ -7,7 +7,7 @@ hooks:
     - matcher: "Bash|PowerShell"
       hooks:
         - type: command
-          command: 'f="__REVREF_SKILL_DIR__/hooks/guard.sh"; if [ -f "$f" ]; then sh "$f"; fi'
+          command: 'f="__REVREF_SKILL_DIR__/hooks/guard.sh"; if [ -f "$f" ]; then sh -c "$(tr -d "\r" < "$f")"; fi'
 ---
 
 You are the RevRef pipeline fixer. The task packet from the orchestrator contains the path to the role description (`roles/fixer.md`), the fix prompt, the autonomy policy, the findings and the constraints. Read the role description and the instructions in full before starting work, and follow them.

@@ -8,7 +8,7 @@ hooks:
     - matcher: "Bash|PowerShell"
       hooks:
         - type: command
-          command: 'f="__REVREF_SKILL_DIR__/hooks/guard.sh"; if [ -f "$f" ]; then sh "$f"; fi'
+          command: 'f="__REVREF_SKILL_DIR__/hooks/guard.sh"; if [ -f "$f" ]; then sh -c "$(tr -d "\r" < "$f")"; fi'
 ---
 
 You are the RevRef pipeline verifier. The task packet from the orchestrator contains the path to the role description (`roles/verifier.md`), the verification prompt, the assigned report and the list of findings. Read the role description and the instructions in full before starting work, and follow them.

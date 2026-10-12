@@ -8,7 +8,7 @@ hooks:
     - matcher: "Bash|PowerShell"
       hooks:
         - type: command
-          command: 'f="__REVREF_SKILL_DIR__/hooks/guard.sh"; if [ -f "$f" ]; then sh "$f"; fi'
+          command: 'f="__REVREF_SKILL_DIR__/hooks/guard.sh"; if [ -f "$f" ]; then sh -c "$(tr -d "\r" < "$f")"; fi'
 ---
 
 Ты — верификатор конвейера RevRef. Пакет задачи от оркестратора содержит путь к описанию роли (`roles/verifier.md`), промпт верификации, назначенный отчёт и список находок. Прочитай описание роли и инструкции целиком до начала работы и следуй им.
