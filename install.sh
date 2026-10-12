@@ -3,12 +3,14 @@
 #   ./install.sh                         — глобально: в $CLAUDE_CONFIG_DIR или ~/.claude (доступно во всех проектах)
 #   ./install.sh --project <путь>        — только в указанный проект: <путь>/.claude
 #   ./install.sh --uninstall [--project <путь>]  — удалить скилл и агентов RevRef
+#   ./install.sh --lang en               — английская версия набора (по умолчанию ru)
 set -eu
 
 src=$(cd "$(dirname "$0")" && pwd)
 agents="revref-reviewer.md revref-verifier.md revref-fixer.md"
 project=""
 uninstall=0
+lang=ru
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -16,10 +18,19 @@ while [ $# -gt 0 ]; do
             [ $# -ge 2 ] || { echo "Не указан путь после --project" >&2; exit 1; }
             project=$2; shift 2 ;;
         --uninstall) uninstall=1; shift ;;
-        -h|--help) sed -n '2,5p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --lang)
+            [ $# -ge 2 ] || { echo "Не указан язык после --lang (ru или en)" >&2; exit 1; }
+            lang=$2; shift 2 ;;
+        -h|--help) sed -n '2,6p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "Неизвестный параметр: $1 (см. --help)" >&2; exit 1 ;;
     esac
 done
+
+case "$lang" in
+    ru) skill_src="$src/skill/revref"; agents_src="$src/agents"; changelog="$src/CHANGELOG.md" ;;
+    en) skill_src="$src/skill-en/revref"; agents_src="$src/agents-en"; changelog="$src/CHANGELOG.en.md" ;;
+    *) echo "Неизвестный язык: $lang (ru или en)" >&2; exit 1 ;;
+esac
 
 if [ -n "$project" ]; then
     [ -d "$project" ] || { echo "Нет такой папки: $project" >&2; exit 1; }
@@ -55,11 +66,23 @@ if [ -d "$skill_dst" ]; then
 fi
 
 mkdir -p "$target/skills" "$agents_dst"
-cp -R "$src/skill/revref" "$skill_dst"
+cp -R "$skill_src" "$skill_dst"
+cp "$changelog" "$skill_dst/CHANGELOG.md"
 for name in $agents; do
-    cp "$src/agents/$name" "$agents_dst/$name"
+    cp "$agents_src/$name" "$agents_dst/$name"
 done
 
-echo "Скилл:   $skill_dst"
+# Абсолютный путь к сторожевому хуку во frontmatter скилла и агентов.
+esc=$(printf '%s' "$skill_dst" | sed 's/[&|\\]/\\&/g')
+set_hook_path() {
+    sed "s|__REVREF_SKILL_DIR__|$esc|g" "$1" > "$1.tmp"
+    mv "$1.tmp" "$1"
+}
+set_hook_path "$skill_dst/SKILL.md"
+for name in $agents; do
+    set_hook_path "$agents_dst/$name"
+done
+
+echo "Скилл:   $skill_dst (язык: $lang, версия: $(cat "$skill_dst/VERSION"))"
 echo "Агенты:  $agents_dst (revref-reviewer, revref-verifier, revref-fixer)"
 echo "Перезапустите сессию Claude Code и выполните в проекте: /revref init"
