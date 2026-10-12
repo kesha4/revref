@@ -34,11 +34,34 @@ W9 Финал ────── QR-дельта, сравнение с базо
 
 ## Установка (Claude Code)
 
-```powershell
-.\install.ps1
+Набор работает на Windows, macOS и Linux. Сами промпты и протоколы от платформы не зависят, а для установки есть два равноценных скрипта.
+
+```bash
+git clone https://github.com/kesha4/revref.git && cd revref
 ```
 
-Скрипт копирует скилл в `~/.claude/skills/revref` и агентов в `~/.claude/agents/`. Только для одного проекта: `.\install.ps1 -Project C:\path\to\project`. Если скилл уже установлен, предыдущая версия сохраняется рядом с суффиксом `.bak-<дата>`. После установки перезапустите сессию Claude Code.
+**macOS, Linux, WSL, Git Bash:**
+
+```bash
+./install.sh
+```
+
+**Windows PowerShell 5.1 или PowerShell 7+ на любой ОС:**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File install.ps1
+```
+
+| Действие | `install.sh` | `install.ps1` |
+|---|---|---|
+| Глобально, для всех проектов | `./install.sh` | `./install.ps1` |
+| Только в один проект (`<проект>/.claude`) | `./install.sh --project <путь>` | `./install.ps1 -Project <путь>` |
+| Удалить | `./install.sh --uninstall` | `./install.ps1 -Uninstall` |
+
+- **Куда ставится.** Скилл копируется в `<папка конфигурации>/skills/revref`, агенты — в `<папка конфигурации>/agents/`. Папка конфигурации — `~/.claude` или значение переменной `CLAUDE_CONFIG_DIR`, если она задана.
+- **Повторная установка.** Если скилл уже установлен, предыдущая версия сохраняется рядом с суффиксом `.bak-<дата>`.
+- **После установки** перезапустите сессию Claude Code.
+- **Без скриптов.** Можно скопировать вручную: папку `skill/revref` → `~/.claude/skills/revref`, файлы `agents/*.md` → `~/.claude/agents/`.
 
 ## Быстрый старт
 
@@ -164,7 +187,8 @@ main ──► revref/<дата> ──/revref finish──► test (стенд 
 ```text
 RevRef_v3/
 ├── README.md
-├── install.ps1
+├── install.sh                установка: macOS, Linux, WSL, Git Bash
+├── install.ps1               установка: Windows PowerShell 5.1, PowerShell 7+
 ├── agents/                     → ~/.claude/agents/
 │   ├── revref-reviewer.md
 │   ├── revref-verifier.md
