@@ -129,7 +129,7 @@ powershell -ExecutionPolicy Bypass -File install.ps1 -Lang en
 | `/revref checkpoint` | Record the full state now, to continue later anywhere |
 | `/revref status` | Short summary from the files; changes nothing |
 | `/revref decisions` | Show the whole approval queue and process your answers from the file |
-| `/revref ask [N\|all]` | Show in the chat the highest-priority unanswered questions (1 by default) and accept the answers right away; can be entered while agents are working |
+| `/revref ask [N\|all\|ID…]` | Show in the chat the highest-priority unanswered questions (1 by default) or specific ones by ID and accept the answers right away; linked decisions as a group; can be entered while agents are working |
 | `/revref review <list> [--verify\|--fix] [--optimal]` | One or more selected reviews in a single launch, in queue order (parameters below) |
 | `/revref wave <Wn>` | Run a single wave |
 | `/revref finish` | Merge the result into the `test` branch (test stand): decision review, trial merge, checks, stand checklist; merge and push — each after your "yes" |
@@ -152,7 +152,7 @@ powershell -ExecutionPolicy Bypass -File install.ps1 -Lang en
 
 | Command | Argument | What it does |
 |---|---|---|
-| `/revref ask [N\|all]` | a number or `all`; `1` by default | How many of the highest-priority questions for the owner to show in the chat |
+| `/revref ask [N\|all\|ID…]` | a number, `all` or decision IDs (`D-015`); can be mixed; `1` by default | How many of the highest-priority questions to show, or which ones |
 | `/revref wave <Wn>` | `W0`…`W9` | Run a single pipeline wave, checking its entry conditions |
 | `/revref` | *(no arguments)* | If a run exists — a short status and an offer to `resume`; if not — command help |
 
@@ -353,7 +353,11 @@ The full pipeline is not mandatory: you can run any review on its own or build a
 /revref ask          the highest-priority question
 /revref ask 5        the five highest-priority ones
 /revref ask all      all unanswered
+/revref ask D-015    a specific decision by ID (and the ones linked to it)
+/revref ask 3 D-015  the three highest-priority ones and D-015
 ```
+
+Linked decisions that must be taken together or depend on each other are shown as one group (up to 3 cards), and a group can be answered with one line: `D-014+D-015 ok`.
 
 The agent shows cards that you can answer without opening any files:
 

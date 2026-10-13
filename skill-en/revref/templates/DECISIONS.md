@@ -31,6 +31,7 @@ The agent will process the answer at the next step boundary or on the `/revref d
 - Alternatives: what options there were and why they were rejected
 - Options for the owner: a) … — recommended, because …; b) …; c) … (a recommendation is mandatory; if there is none — "Recommendation: none — <why and what needs to be known>")
 - Blocks: tasks and findings waiting for this answer
+- Linked decisions: D-NNN (together | depends on | blocks) — `/revref ask` uses them to show decisions as a group
 - Rationale: why this option was chosen
 - Impact: what will change, for whom (users, external systems, money, data)
 - Reversibility: how to roll back (git revert <hash> / do not merge the branch / migration down / flag)

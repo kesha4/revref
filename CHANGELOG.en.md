@@ -8,6 +8,12 @@ Kit versions follow [semantic versioning](https://semver.org/). The current vers
 
 A version has a "Migration" section only if something has to be done to a run already in progress when moving to it. The orchestrator reads it on `resume` if the kit version has changed.
 
+## 3.4.0 — 2026-10-13
+
+- `/revref ask D-015`, `ask D-014 D-015`, `ask 3 D-015` — showing decisions by ID, including already answered ones (the answer can be changed until it is processed).
+- Linked decisions ("together", "depends on", "blocks") are shown as one group of up to 3 cards; a group can be answered with one line `D-014+D-015 ok`. Contradictory answers within a "together" pair are not recorded without clarification.
+- `DECISIONS.md` template: the "Linked decisions" field.
+
 ## 3.3.0 — 2026-10-13
 
 Lessons from the first full run on the demo project (`examples/demo-shop`).

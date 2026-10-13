@@ -285,7 +285,7 @@ Make the changes for the chosen `.revref/` option in a `revref(finish): …` com
 
 ## §10. Questions for the owner in chat (`ask`)
 
-The command `/revref ask [N | all]` outputs to the chat the N highest-priority entries waiting for the owner (1 by default; `all` — all of them). The format is such that the owner can answer right in the chat without opening any files. Apart from recording the answers received, the command changes nothing.
+The command `/revref ask [N | all | ID…]` outputs to the chat the N highest-priority entries waiting for the owner (1 by default; `all` — all of them), or specific entries by ID. The format is such that the owner can answer right in the chat without opening any files. Apart from recording the answers received, the command changes nothing.
 
 ### What is shown
 
@@ -300,6 +300,24 @@ The command `/revref ask [N | all]` outputs to the chat the N highest-priority e
 3. **Class:** 🔴 C → 🟠 B → questions.
 4. **Severity** of related findings: Critical → High → Medium → Low.
 5. **Age:** older entries first.
+
+A group of linked entries (see below) takes the place of its highest-priority entry.
+
+### Showing by ID
+
+- `ask D-015`, `ask D-014 D-015` — show the given entries as cards regardless of priority and count. They can be mixed: `ask 3 D-015` — the three highest-priority entries and D-015.
+- **An already answered entry** is shown with the mark "Owner decision: …". Until the answer is processed (§7), it can be changed with a new answer; after processing the card is read-only, with the outcome (merged, reverted, replaced).
+- **Unknown ID** — say so and suggest the nearest existing IDs.
+- Linked entries are also shown when selecting by ID — by the rules below.
+
+### Linked entries
+
+- **Where links come from.** The entry's "Linked decisions" field, as well as mentions of other D-NNN in the "Blocks", "Dependent changes", "Depends on" fields and in "merge together with D-NNN" notes.
+- **Link types:** "together" (decide and merge only as a pair), "depends on", "blocks".
+- **Shown as a group.** Linked entries without an owner answer are output right under the main card as one group if the group has at most 3 entries including the main one. A group counts as one position when counting N. Order within the group follows dependencies: first what the others depend on.
+- **A large group** (more than 3 entries): the main card is shown plus the line "Linked: D-…, D-… — show: `ask D-… D-…`".
+- **The card header** lists the links: "linked: D-015 (together)".
+- **Answering a group:** per ID or with a single line `D-014+D-015 ok` — applied to all entries of the group that have a recommendation. Contradictory answers within a "together" link (one approved, the other rejected) are not recorded: explain the consequences and ask the owner to clarify.
 
 ### Card format
 
@@ -331,7 +349,8 @@ Answer: "D-012 ok" — accept the recommendation (a) · "D-012 b" · "D-012 othe
   - `D-012 reject` / `D-012 no`;
   - `D-012 otherwise: …`;
   - `D-012 skip`;
-  - `D-012 ?: <question>` — a counter-question.
+  - `D-012 ?: <question>` — a counter-question;
+  - `D-014+D-015 ok` — one answer for a group of linked entries.
 - **Several answers** in one message are separated by `;` or a line break.
 - **Without an ID** ("ok", "a", "yes", "reject") — allowed only if the last output contained exactly one card.
 - **"All ok" or "all as recommended"** applies only to the cards of the last output, not to the whole queue, and only to those that have a recommendation.
