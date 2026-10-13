@@ -17,6 +17,22 @@ The run's long-term memory: stable facts about the project that any agent needs 
 Entry points:
 External systems (DB, APIs, queues, file storage):
 
+## Platforms, clients and environments
+
+<!-- Who uses the system and with what — to assess the regression risk of every fix. -->
+
+- Clients and their versions, including old ones that keep working during an update:
+- Minimum supported platforms (browsers, OSes, devices — for example, an old browser on an embedded device):
+- Server, containers, deployment; how updates roll out (all at once or gradually), compatibility of an old client with a new server:
+
+## Sources of intended behavior
+
+<!-- Where to check whether something is a defect or intended. -->
+
+- The specification and its appendices (decisions, agreements):
+- The owner's decisions: `DECISIONS.md`, "Owner instructions" below
+- The real operating process (who uses the system, when and how):
+
 ## Commands
 
 <!-- Each one verified by running it. The run may continue on another machine, so state the environment where it was verified. If commands differ between OSes, give the variants in the "Notes" column or as separate rows. -->

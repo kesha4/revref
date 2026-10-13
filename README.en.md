@@ -22,12 +22,14 @@ W9 Final ────── QR delta, comparison with the baseline, final report
 
 Each wave:
   reviews (parallel) → verification (fresh agents) → plan (groups with no file overlap)
-  → fixes (parallel in isolated worktrees) → gate (checks) → milestone and checkpoint
+  → fixes (parallel in isolated worktrees) → every fix checked by an independent verifier
+  → gate (checks) → milestone and checkpoint
 ```
 
 **Roles.**
 - **Orchestrator** — the main session: plans, merges, makes decisions, maintains the state files.
-- **Reviewer, verifier, fixer** — subagents. The reviewer and verifier do not change code. The fixer works in a separate worktree and task branch, and only the orchestrator merges its work, after checks.
+- **Reviewer, verifier, fixer** — subagents. The reviewer and verifier do not change code. The fixer works in a separate worktree and task branch, and only the orchestrator merges its work, after checks. Each role can run in several instances at once on non-overlapping modules or files.
+- **Independent check.** Findings and every finished fix are checked by a verifier who was not the author of the review or the change. For a fix it answers three questions: is the premise right (specification, decisions taken, real process), what the change forbids or changes for an honest user (such cases only by an owner decision, label `LEGIT`), and regression risk (other clients, an old client version during an update, minimum platforms, server and containers — with tests and code reading).
 
 **Decisions.**
 - 🟢 **A** — technical: made immediately.
@@ -465,8 +467,8 @@ revref/
     ├── prompts/
     │   ├── common-rules.md     general review rules
     │   ├── reviews/            QR + 21 specialized reviews
-    │   └── work/               verify, plan, fix, final
-    └── templates/              CONFIG, STATE, CONTEXT, PLAN, FINDINGS, DECISIONS, INBOX, JOURNAL, report, task, custom-review
+    │   └── work/               verify, verify-fix, plan, fix, final
+    └── templates/              CONFIG, STATE, CONTEXT, PLAN, FINDINGS, DECISIONS, INBOX, JOURNAL, report, task, fix-check, custom-review
 ```
 
 ## License

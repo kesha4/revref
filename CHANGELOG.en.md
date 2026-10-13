@@ -8,6 +8,14 @@ Kit versions follow [semantic versioning](https://semver.org/). The current vers
 
 A version has a "Migration" section only if something has to be done to a run already in progress when moving to it. The orchestrator reads it on `resume` if the kit version has changed.
 
+## 3.5.0 — 2026-10-13
+
+- **Independent check of every fix.** Before merging (and before a pending patch is queued) the finished branch is checked by a verifier who was not the author of the review or the change, with three questions: is the premise right (specification, appendices, decisions taken, real process), what the change forbids or changes for an honest user, regression risk (other clients, an old client during an update, minimum platforms, server and containers — with tests and code reading). New prompt `prompts/work/verify-fix.md` and template `templates/fix-check.md`.
+- The same three questions in the verification of findings.
+- Label `LEGIT` (class C): a fix narrowing a legitimate scenario of an honest user — only by an owner decision. A "Legitimate scenarios" field in the finding format and "Affected legitimate scenarios" in decisions.
+- `CONTEXT.md`: "Platforms, clients and environments" and "Sources of intended behavior" sections.
+- Several subagents of one role on non-overlapping modules and files: a table in PROTOCOLS.md §3; verifiers of one report write verdicts into their own files — each file has one writer.
+
 ## 3.4.0 — 2026-10-13
 
 - `/revref ask D-015`, `ask D-014 D-015`, `ask 3 D-015` — showing decisions by ID, including already answered ones (the answer can be changed until it is processed).

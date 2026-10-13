@@ -7,7 +7,7 @@
 | Role | Claude Code agent | Role description | What it may change |
 |---|---|---|---|
 | Reviewer | `revref-reviewer` | `roles/reviewer.md` | Only its own report `reports/<ID>.md` |
-| Verifier | `revref-verifier` | `roles/verifier.md` | Only the verdicts in the assigned report |
+| Verifier | `revref-verifier` | `roles/verifier.md` | Verdicts in the assigned report or in its own file `reports/<ID>.verdicts-<k>.md`; fix check `tasks/<ID>.check.md` |
 | Fixer | `revref-fixer` | `roles/fixer.md` | The files of its task in its own worktree and `tasks/<ID>.md` |
 
 If the named agents are not installed, use a general-purpose agent and put this as the first line of the packet: "Read your role description: <absolute path to roles/...>".
@@ -66,6 +66,21 @@ Problems: <what failed and why>
    - then updating `FINDINGS`, `DECISIONS`, `STATE` in a separate commit `revref(state): ...` or in the merge commit.
 4. **Merge conflict or red checks after merging.** Roll back the merge and return the task to the fixer: rebase its work onto the fresh HEAD in a new worktree. Repeated failure — carry out the task sequentially or mark it "blocked".
 5. **Without worktrees.** If isolation is unavailable, fixes are carried out sequentially in the run branch. The fixer switches branches in the shared working directory, so: launch it only when no other subagent is writing to the working directory (including reports in `.revref/reports/`); commit the step state before launching — otherwise uncommitted files move into the task branch.
+
+### Several subagents of one role
+
+One role can work in several instances at once if their areas do not overlap.
+
+| Role | How work is split | What each one writes | Why there are no conflicts |
+|---|---|---|---|
+| Reviewer | Different reviews in parallel; one review of a large project — by module shards (§2) | Its own report `reports/<ID>.md` or `reports/<ID>.<shard>.md` | Reports are in different files, code is only read |
+| Verifier | One report each; a large report — by shards or groups of findings | Verdicts in its shard's report or in its own file `reports/<ID>.verdicts-<k>.md` | One file has one writer; the orchestrator transfers verdicts into the report |
+| Verifier (fix checks) | One task each | `tasks/<ID>.check.md` | One file per task; never checks its own work |
+| Fixer | Tasks of one group with no file overlap (item 1) | Its own worktree and branch `revref/task/<ID>`, `tasks/<ID>.md` | Worktree isolation; the orchestrator merges one at a time |
+
+- In total no more than `CONFIG.Parallelism` subagents of any roles run at once.
+- Fixers run in parallel only in isolated worktrees. Without worktrees — strictly one at a time (item 5).
+- The shard or group is set in the packet's "Scope" field: a list of modules or files. The subagent stays within it; findings beyond the boundary go to "Seen in passing".
 
 ## §4. Light checkpoint
 

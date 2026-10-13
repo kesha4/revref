@@ -26,7 +26,7 @@ The kit version is in the `VERSION` file, the change history is in `CHANGELOG.md
 | `POLICY.md` | Decision classes, labels, autonomy levels, git, stop conditions | `run`, `resume`, `wave`, `decisions`, `review --fix`, `finish` |
 | `PROTOCOLS.md` | Subagent contract, parallelism, checkpoint, resume, owner answers, merging the result | `run`, `resume`, `checkpoint`, `decisions`, `ask`, `wave`, `review`, `finish` |
 | `roles/` | Subagent roles: reviewer, verifier, fixer | Passed to subagents |
-| `prompts/` | Common review rules, 22 review prompts, work prompts (verify, plan, fix, final) | Passed to subagents |
+| `prompts/` | Common review rules, 22 review prompts, work prompts (verify, verify-fix, plan, fix, final) | Passed to subagents |
 | `templates/` | Templates for the files of the `.revref/` working folder and for a custom review | `init`, restoring damaged files |
 | `VERSION`, `CHANGELOG.md` | Kit version and change history | `init`, `resume`, `status` |
 | `hooks/guard.sh` | Guard hook: blocks dangerous git commands and committing secrets | Attached automatically |

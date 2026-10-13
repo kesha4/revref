@@ -16,6 +16,7 @@ Carry out one task of the wave plan: fix the findings it includes in your worktr
 2. **Classification.**
    - Check the actual fix against the class from the packet per `POLICY.md`. If the fix turns out to be of a higher class (changes behavior, money, data, access, a contract, the interface), stop and return the task to the orchestrator with options.
    - If class B is allowed in the packet, make such a change as a separate commit, without unrelated edits.
+   - List in your notes the legitimate scenarios the change will forbid or alter. If there are any and the packet has no owner decision on them (label `LEGIT`), stop and return the task with this list.
 3. **Test first.**
    - If there is no test and the regression risk is medium or high, first write a test that captures the problem (fails before the fix) or the current behavior (for a refactoring).
    - If a test is impossible, describe a manual check.

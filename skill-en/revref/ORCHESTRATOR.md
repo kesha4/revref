@@ -37,7 +37,8 @@ while PLAN.md has unfinished waves:
   1. Review        — in parallel, one subagent per review or shard
   2. Verification  — in parallel, fresh subagents, not the ones that did the review
   3. Wave plan     — tasks, decision classes, groups with no file overlap
-  4. Fixes         — group by group; within a group in parallel in isolated worktrees
+  4. Fixes         — group by group; within a group in parallel in isolated worktrees;
+                    every fix is checked by an independent verifier before merging (three questions)
   5. Gate          — checks no worse than the baseline, every finding of the wave has a final status
   6. Milestone     — JOURNAL, tag, full checkpoint, short message in the chat
   after each step: owner answers in DECISIONS.md (PROTOCOLS.md §7)

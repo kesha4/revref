@@ -34,6 +34,7 @@ The agent will process the answer at the next step boundary or on the `/revref d
 - Linked decisions: D-NNN (together | depends on | blocks) — `/revref ask` uses them to show decisions as a group
 - Rationale: why this option was chosen
 - Impact: what will change, for whom (users, external systems, money, data)
+- Affected legitimate scenarios: what an honest user will no longer be able to do or will get differently (per the fix check), or "none"
 - Reversibility: how to roll back (git revert <hash> / do not merge the branch / migration down / flag)
 - Implementation: commit <hash> | branch revref/pending/D-NNN | not implemented
 - Dependent changes: what is built on top of this decision (rolled back together with it)

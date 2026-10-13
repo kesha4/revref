@@ -45,7 +45,8 @@ Apply to every review together with its specialized prompt.
 - Problem: what the issue is
 - Scenario: when and how it shows up, what it leads to
 - Fix: a concrete change or code example; if there are several options — the recommended one first
-- Decision labels: expected labels per POLICY.md (MONEY, DATA, SECURITY, BEHAVIOR, CONTRACT, UX…) or "none"
+- Decision labels: expected labels per POLICY.md (MONEY, DATA, SECURITY, BEHAVIOR, CONTRACT, UX, LEGIT…) or "none"
+- Legitimate scenarios the fix will change: which valid actions of an honest user will get a refusal or a different result, or "none"
 - Affected files: what will have to change for the fix (for planning parallel work)
 - How to verify the fix: a test or a manual check
 - Verification verdict: —

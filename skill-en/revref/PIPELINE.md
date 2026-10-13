@@ -50,7 +50,7 @@ Besides the 22 built-in reviews, a project can have its own — for the specific
 - The result is `reports/<ID>.md`. Add the findings to `FINDINGS.md` with the status "open".
 
 ### 2. Verification
-- For each report — a fresh verifier subagent (`prompts/work/verify.md`), not the one that did the review. A large report is split among several verifiers by groups of findings.
+- For each report — a fresh verifier subagent (`prompts/work/verify.md`), not the one that did the review. A large report is split among several verifiers by groups of findings or by shards; each writes verdicts to its own file `reports/<ID>.verdicts-<k>.md`, and you transfer them into the report — one file has one writer.
 - Critical, High and Medium are checked one at a time, Low — as a batch, with a quick check.
 - Transfer the verdicts to `FINDINGS.md`. False findings stay in the registry with a mark — this protects against them reappearing.
 
@@ -72,6 +72,11 @@ Besides the 22 built-in reviews, a project can have its own — for the specific
 
 ### 4. Fixes
 - Each task is carried out by a fixer subagent (`prompts/work/fix.md`). Parallel fixers work in isolated worktrees, and you merge their branches one at a time (PROTOCOLS.md §3).
+- **Fix check before merging.** A finished task branch is checked by a fresh verifier — not the review author and not the fixer — per `prompts/work/verify-fix.md`: is the premise right, what the change forbids or changes for an honest user, regression risk (tests and code reading).
+  - "Accept" — merge.
+  - "Return to the fixer" — a new iteration of the task.
+  - "To the owner" — do not merge: the branch becomes `revref/pending/D-NNN`, a decision labelled `LEGIT` or `DISPUTED` with the list of affected scenarios goes into `DECISIONS.md`.
+  - Patches for class C pending branches are checked the same way, before being queued.
 - After each merged task:
   - run the checks;
   - update `FINDINGS.md`;
@@ -113,7 +118,7 @@ If the gate is not passed:
    - whether push is allowed.
 
    Whatever you did not ask, determine yourself and mark it in `CONFIG.md` as an "assumption".
-4. **Project map** → `CONTEXT.md`: purpose, stack, modules and their responsibilities, entry points, external systems, size (files and lines by language).
+4. **Project map** → `CONTEXT.md`: purpose, stack, modules and their responsibilities, entry points, external systems, size (files and lines by language); clients, platforms and environments; sources of intended behavior (the specification and its appendices, decisions taken, the real process).
 5. **Commands** → `CONTEXT.md`: install, run, tests, linter, type check, build, coverage, audit. Verify each command by running it.
 6. **Baseline** → `CONTEXT.md`: run all checks and record the results: number of tests and failures, linter warnings, type errors, run times, coverage and vulnerabilities, if available. What was failing before the run is not a regression, but a task for W2 or W3.
 7. **If there are no tests or very few:**

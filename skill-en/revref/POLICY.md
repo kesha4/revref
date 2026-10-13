@@ -16,6 +16,7 @@ The agent works autonomously and does not wait for the owner. Everything the age
 - **Unsure of the class — choose the higher one.**
 - **Monetary fixes prescribed by the spec** (`CONFIG.Monetary fixes per spec`). By default the `MONEY` label is always class C. If the owner chose "class B", a fix labelled `MONEY` gets class B when all three conditions hold: the behaviour is unambiguously prescribed by the specification or README; prices, tariffs and business rules do not change; the change is pinned by a test. Other class C labels are not affected.
 - **Every decision and question in the queue comes with the agent's recommendation.** Options with letters, the recommended one first, with a reason. If a recommendation is impossible, explain why and what is missing.
+- **Legitimate scenarios — only with the owner.** A fix after which an honest user gets a refusal or a different result in a scenario that used to work legitimately is not merged without an owner decision (label `LEGIT`), even if technically it fixes a bug. The exception is a scenario possible only because of a vulnerability or a bug (for example, SQL injection): this is justified in the fix check.
 - **Don't build on top of what is unapproved.** Avoid other changes on top of a class B decision where possible. If you had to make them, list them in the "Dependent changes" field so that a revert is complete.
 
 ## Labels
@@ -26,6 +27,7 @@ The agent works autonomously and does not wait for the owner. Everything the age
 | `DATA` | 🔴 C | DB schema, migrations of existing data, deletion or transformation of data, retention periods, format of stored data, any irreversible operations |
 | `SECURITY` | 🔴 C | Access rights, authentication, sessions, cryptography, keys, network rules and ports, weakening of any protection. Strengthening protection that does not affect legitimate users is 🟠 B |
 | `LEGAL` | 🔴 C | Personal data, licenses, compliance, texts of agreements and policies |
+| `LEGIT` | 🔴 C | The fix narrows or changes a legitimate scenario of an honest user: something that used to work legitimately will get a refusal or a different result. The list of scenarios goes into the decision |
 | `OWNER` | 🔴 C | In the agent's opinion, this cannot be decided without the owner for some other reason — state it |
 | `BUSINESS` | 🟠 B | A business rule or process changes: what is allowed, the order of steps, conditions, roles, statuses |
 | `BEHAVIOR` | 🟠 B | Observable behavior changes for users or external systems, including fixing a bug whose behavior others may have relied on |
