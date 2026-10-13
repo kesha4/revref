@@ -93,6 +93,7 @@ If the gate is not passed:
 ### 6. Milestone
 - Entry in `JOURNAL.md`: results, counters, commit range, notes.
 - Tag `revref/<run date>/W<n>` — a rollback point.
+- **Refresh pending branches.** If the wave changed files touched by `revref/pending/*` branches, update them to the run branch with merge commits (no rebase), make sure `git merge-tree` is clean, and check a trial merge of all pending branches together in a temporary worktree. Resolve conflicts and silent duplicates (classes, constants, identically named tests) immediately; record the remaining merge specifics in the decisions' "Dependent changes". Otherwise the branches go stale by `finish`, and an automatic merge can silently disable tests.
 - Full checkpoint (PROTOCOLS.md §5).
 - A short message in the chat.
 - Check the owner's answers in `DECISIONS.md`.

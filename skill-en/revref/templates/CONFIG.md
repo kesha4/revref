@@ -15,6 +15,7 @@ This file is filled in by the owner. On `init` the agent creates a draft: it ask
 
 - Autonomy level: balanced                 <!-- cautious | balanced | bold — see POLICY.md -->
 - Fix threshold: Medium                    <!-- Critical | High | Medium | Low; below the threshold — quick wins only -->
+- Monetary fixes per spec: class C         <!-- class C | class B — see POLICY.md: B only for fixes unambiguously prescribed by the spec, with no change to prices or rules -->
 - Reviews: all applicable                  <!-- force include: … ; exclude: … -->
 - Custom reviews: none                     <!-- ID → wave, e.g.: VPN → W2, GDPR → W8; files — .revref/reviews/<ID>.md (PIPELINE.md → "Custom reviews") -->
 - Scope: whole repository                  <!-- include paths: … ; exclude paths: … -->

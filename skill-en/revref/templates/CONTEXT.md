@@ -37,6 +37,8 @@ Verified in environment: <OS, shell, runtime versions>
 
 ## Baseline
 
+<!-- The state of checks at the START of the run — the "no worse than the baseline" reference for gates. The current state lives in STATE.md → "Checks". Do not update it as work progresses. -->
+
 - Recorded: YYYY-MM-DD, commit <hash>
 - Tests: total … · failing … (which) · time …
 - Coverage: …

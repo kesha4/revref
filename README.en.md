@@ -164,6 +164,7 @@ powershell -ExecutionPolicy Bypass -File install.ps1 -Lang en
 |---|---|---|
 | Autonomy level | balanced | cautious · balanced · bold |
 | Fix threshold | Medium | Critical · High · Medium · Low; below the threshold — quick wins only |
+| Monetary fixes per spec | class C | class C · class B (only fixes unambiguously prescribed by the spec, no change to prices or rules) |
 | Reviews | all applicable | force-include / exclude IDs |
 | Custom reviews | none | `ID → wave`, for example `VPN → W2` |
 | Scope | whole repository | include / exclude paths |

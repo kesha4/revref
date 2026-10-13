@@ -14,6 +14,7 @@ The agent works autonomously and does not wait for the owner. Everything the age
 
 - **A decision's class is the highest class among its labels.** At least one label means the decision is in the approval queue.
 - **Unsure of the class — choose the higher one.**
+- **Monetary fixes prescribed by the spec** (`CONFIG.Monetary fixes per spec`). By default the `MONEY` label is always class C. If the owner chose "class B", a fix labelled `MONEY` gets class B when all three conditions hold: the behaviour is unambiguously prescribed by the specification or README; prices, tariffs and business rules do not change; the change is pinned by a test. Other class C labels are not affected.
 - **Every decision and question in the queue comes with the agent's recommendation.** Options with letters, the recommended one first, with a reason. If a recommendation is impossible, explain why and what is missing.
 - **Don't build on top of what is unapproved.** Avoid other changes on top of a class B decision where possible. If you had to make them, list them in the "Dependent changes" field so that a revert is complete.
 

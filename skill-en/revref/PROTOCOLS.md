@@ -65,7 +65,7 @@ Problems: <what failed and why>
    - then the checks;
    - then updating `FINDINGS`, `DECISIONS`, `STATE` in a separate commit `revref(state): ...` or in the merge commit.
 4. **Merge conflict or red checks after merging.** Roll back the merge and return the task to the fixer: rebase its work onto the fresh HEAD in a new worktree. Repeated failure — carry out the task sequentially or mark it "blocked".
-5. **Without worktrees.** If isolation is unavailable, fixes are carried out sequentially in the run branch.
+5. **Without worktrees.** If isolation is unavailable, fixes are carried out sequentially in the run branch. The fixer switches branches in the shared working directory, so: launch it only when no other subagent is writing to the working directory (including reports in `.revref/reports/`); commit the step state before launching — otherwise uncommitted files move into the task branch.
 
 ## §4. Light checkpoint
 

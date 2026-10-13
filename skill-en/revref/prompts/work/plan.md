@@ -17,7 +17,7 @@ Draw up the fix plan for the current wave and write it to `.revref/PLAN.md`, in 
    - If the choice is technical and obvious, decide yourself.
    - Otherwise — a decision with the `DISPUTED` label in `DECISIONS.md`.
 3. **Form tasks.** A task is a coherent unit of work for one fixer, usually up to a day. Split large findings into tasks, each of which leaves the project working.
-4. **Determine the decision class** of each task per `POLICY.md`, based on the findings' labels and your assessment:
+4. **Determine the decision class** of each task per `POLICY.md`, based on the findings' labels and your assessment. A task's class is the highest class among the labels of all its findings, including labels added by verifiers; it may not be lowered when findings are grouped into a task:
    - class C — into the `DECISIONS.md` queue, not scheduled for execution;
    - class B — according to the autonomy level.
 5. **Account for dependencies:**

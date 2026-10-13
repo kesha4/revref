@@ -17,6 +17,7 @@ Quality of the tests themselves:
 - excessive mocking, where the test verifies the mocks rather than the code;
 - tests without assertions or with weak assertions, meaningless tests written for the coverage number;
 - for key tests, answer: what realistic bug will this test not catch;
-- test run speed and running tests in CI.
+- test run speed and running tests in CI;
+- isolation from the outside world: are the network and real external services blocked in tests; does the block apply in child processes (CLI tests via subprocess), and do those processes inherit keys and secrets from the environment that would send real requests.
 
 Propose concrete tests for uncovered areas: name, scenario, input data, expected result — in priority order. For the top 5, provide the test code in the project's style.

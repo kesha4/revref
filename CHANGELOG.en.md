@@ -8,6 +8,18 @@ Kit versions follow [semantic versioning](https://semver.org/). The current vers
 
 A version has a "Migration" section only if something has to be done to a run already in progress when moving to it. The orchestrator reads it on `resume` if the kit version has changed.
 
+## 3.3.0 — 2026-10-13
+
+Lessons from the first full run on the demo project (`examples/demo-shop`).
+
+- `Monetary fixes per spec` setting: at the owner's choice, fixes labelled `MONEY` that are unambiguously prescribed by the specification and change no prices or rules can be class B (default — C).
+- A task's class in the wave plan is the highest class among the labels of all its findings, including those added by verifiers.
+- At every milestone pending branches are refreshed to the run branch and a trial merge of all of them together is checked: stale branches silently created duplicate classes and disabled tests on automatic merge.
+- Without worktrees a fixer is launched only when no other subagent is writing to the working directory, and the step state is committed before it starts.
+- Roles: mandatory cleanup of temporary files; the fixer does not revert uncommitted work while checking mutations.
+- The TEST review checks whether test child processes inherit keys and secrets from the environment.
+- `CONTEXT.md` template: the baseline is the state at the start of the run; the current state is in `STATE.md`.
+
 ## 3.2.1 — 2026-10-13
 
 - The guard hook works even if git rewrote `guard.sh` with CRLF line endings (Windows with `core.autocrlf=true`, worktrees, fresh clones).
