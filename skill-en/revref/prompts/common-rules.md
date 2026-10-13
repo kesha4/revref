@@ -59,6 +59,10 @@ Apply to every review together with its specialized prompt.
 
 Do not expand on findings outside the review's topic: one line in the "Seen in passing" section, stating which review will handle them.
 
+## Scope — commits
+
+If the packet sets the scope "commits", assess the changes of these commits and their impact: call sites, consumers, compatibility. Every finding has the field "Origin: introduced <sha> | aggravated <sha> | pre-existing". Problems that existed before these commits in unchanged code go to "Seen in passing". Finding IDs — `<ID>-c<NN>`.
+
 ## Report summary
 
 - **Top 5 findings** by priority (severity and confidence versus effort) and the recommended fix order, taking dependencies into account.

@@ -158,7 +158,7 @@ The command `review <list> [--verify | --fix] [--optimal]` runs the selected rev
 
 1. **Expanding names.** Wave names expand into their reviews (`W2` → SEC DEP BUG DATA EDGE RES and custom reviews assigned to W2; `W1` and `W9` → QR). `all` → all reviews W2–W8, including custom ones, applicable per the `PLAN.md` matrix; if there is no matrix — all except those clearly inapplicable.
 2. **Unknown ID** (neither a built-in prompt nor `.revref/reviews/<ID>.md`). Do not start work: report which IDs are valid.
-3. **Duplicates** are removed; the first occurrence stays.
+3. **Duplicates** are removed; the first occurrence stays. An empty list is allowed only with the "commits" scope (`--commits`, `--since`, `--until`) — then it is QR in changes mode.
 4. **Order.** Without `--optimal` — the owner's order. With `--optimal` — pipeline order: QR, then W2 → W8, within a wave — as in the waves table.
 5. **Inapplicable reviews** (for example, RWD with no UI) are skipped with the reason recorded; the queue continues.
 6. **Recording the queue.** Before starting work, write the queue to `PLAN.md` → "Queue" and to `STATE.md`: mode "queue", items, current item.
@@ -204,6 +204,34 @@ The owner's order is respected. If it is risky, warn in one line in the chat, re
    - Reports without `--fix` are later used by the pipeline as findings seen in passing for their wave, with re-verification if the code has changed.
 3. **Returning to the pipeline.** If the pipeline was paused, set the mode in `STATE.md` back to "pipeline".
 4. **Checkpoint** (with `--fix` — with a commit) and a short message in the chat: what was done, how many decisions await the owner, where the summary is.
+
+## Review of changes (scope — commits)
+
+The `--commits`, `--since` and `--until` parameters of the `review` command narrow the scope of any review to the changes of the selected commits. Without a review list, QR runs in changes mode.
+
+### Commit set
+
+1. **Determine the set** on the current branch:
+   - `--commits N` — `git log -n N`;
+   - `--commits <from>..<to>` — `git log <from>..<to>`;
+   - `--commits <sha>,<sha>` — each SHA via `git rev-parse --verify`; an ambiguous or missing SHA — stop and ask;
+   - `--since` / `--until` — `git log --since=… --until=…` by commit date in the machine's time zone;
+   - `--commits N` together with `--since` / `--until` — the last N commits of the period.
+2. **An empty set** — report it and do not start the review. Merge commits are assessed by their changes relative to the first parent.
+3. **Record the set** in `PLAN.md` → "Queue" and in `STATE.md`: SHA, author, date, subject, a summary of changed files (`git diff --stat`).
+4. **Diff.** A contiguous set (last N, a range, a period without gaps) — one combined diff from the parent of the first commit to the last one; commits listed out of order — the diff of each separately (`git show <sha>`).
+
+### Packet and report
+
+- **The packet's "Scope" field:** the commit set, diff commands, the list of changed files. The reviewer also reads the surroundings of the changes — call sites, consumers of the changed functions, formats and settings — but findings are limited to what these commits introduced or affected.
+- **Report:** `reports/<ID>.changes-<YYYY-MM-DD>[-<n>].md`; finding IDs — `<ID>-c<NN>` (for example, `SEC-c03`), so they do not clash with a full review.
+- **Origin.** Every finding has the field "Origin: introduced <sha> | aggravated <sha> | pre-existing". Problems that existed before these commits in unchanged code go only to "Seen in passing" unless the changes affect them.
+- **Verification** (`--verify`, `--fix`) and fix checks — as usual; the verifier also checks the finding's origin.
+
+### Fixes (`--fix`)
+
+- Fixes go into the run branch, as in an ordinary review queue: the run branch is created from the current HEAD, not from the selected commits.
+- If the selected commits are not in the history of the current branch (another branch), only reports are produced, without `--fix`; say so.
 
 ## Wave overlap
 

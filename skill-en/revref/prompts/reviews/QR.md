@@ -37,3 +37,15 @@ If the task packet specifies delta mode:
 - **No repeats.** Do not repeat findings that are already in `FINDINGS.md` with the status "deferred" or "waiting for owner".
 
 Delta mode report: `.revref/reports/QR-delta.md`.
+
+## Changes mode (scope — commits)
+
+If the packet sets the scope "commits", do a comprehensive review of these changes, like a pull request review:
+
+- what was changed and why (from commit messages and the diff), and whether it matches the goal;
+- for each of the 9 blocks — only what the changes introduced or affected; inapplicable blocks — one line;
+- tests and documentation: are the changes covered by tests, were the README, specification and comments updated;
+- compatibility: formats, API, data schema, configuration, old clients during an update;
+- which specialized reviews are worth running on these changes (`/revref review <ID> --commits …`) and why.
+
+Changes-mode report: `.revref/reports/QR.changes-<YYYY-MM-DD>.md`.

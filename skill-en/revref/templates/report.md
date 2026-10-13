@@ -2,7 +2,7 @@
 
 - Wave: W<n> · shard: <name or "whole project">
 - Base commit: <hash> · date: YYYY-MM-DD
-- Scope: <paths and modules>
+- Scope: <paths and modules | commits: last N, a period or a list of SHAs; diff>
 - Tools: <what was run and the result>
 
 ## Understanding of the project and review scope

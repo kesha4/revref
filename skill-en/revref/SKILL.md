@@ -1,7 +1,7 @@
 ---
 name: revref
 description: A multi-day review and refactoring pipeline for a project of any type and size — review waves in the optimal order, parallel subagents, autonomous decisions with a log and an approval queue for the owner, checkpoints and resume across sessions. Started manually with the /revref command.
-argument-hint: "init | run | resume | checkpoint | status | decisions | review <ID|Wn|all>... [--verify|--fix] [--optimal] | wave <Wn> | ask [N|all|ID…] | finish"
+argument-hint: "init | run | resume | checkpoint | status | decisions | review <ID|Wn|all>... [--verify|--fix] [--optimal] [--commits N|SHA,…|A..B] [--since DATE] [--until DATE] | wave <Wn> | ask [N|all|ID…] | finish"
 disable-model-invocation: true
 hooks:
   PreToolUse:
@@ -54,12 +54,22 @@ The kit version is in the `VERSION` file, the change history is in `CHANGELOG.md
   - `--verify` — reports and verification;
   - `--fix` — for each review in turn, the full wave cycle: review → verification → plan → fixes → gate → milestone.
 - **Order:** by default — as given. With `--optimal` — reordered by the pipeline.
+- **Scope — commits** (optional; details — `PIPELINE.md` → "Review of changes"):
+  - `--commits N` — the last N commits of the current branch;
+  - `--commits <sha>[,<sha>…]` — the listed commits;
+  - `--commits <from>..<to>` — a git range;
+  - `--since <date>` and/or `--until <date>` — commits within a period.
+
+  The review looks only at the changes of these commits and at what they affect. Without a review list (`review --commits 5`), QR runs in changes mode.
 
 Examples:
 - `review SEC` — a single security report;
 - `review SEC BUG EDGE --verify` — three verified reports;
 - `review TEST HYG DRY --fix` — in turn: tests, cleanup, duplication, with fixes;
-- `review W2 DX --fix --optimal`.
+- `review W2 DX --fix --optimal`;
+- `review --commits 5` — a comprehensive review of the last five commits;
+- `review SEC BUG --since 2026-10-01 --until 2026-10-10 --verify` — security and bugs in the commits of a period;
+- `review SEC --commits a1b2c3d,e4f5a6b` — only the listed commits.
 
 **`finish`** — merge the run result into the target branch (`CONFIG.Target branch`, `test` by default, usually linked to the test stand) per `PROTOCOLS.md` §9:
 1. Go through unanswered decisions with the owner.

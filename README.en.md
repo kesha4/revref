@@ -150,6 +150,17 @@ powershell -ExecutionPolicy Bypass -File install.ps1 -Lang en
 
 `--verify` and `--fix` are mutually exclusive (`--fix` includes verification). `--optimal` can be combined with any mode.
 
+**Scope — commits.** Any review can be limited to the changes of selected commits:
+
+| Parameter | Values | What it does |
+|---|---|---|
+| `--commits N` | a number | The last N commits of the current branch |
+| `--commits <sha>,<sha>` | comma-separated SHAs | Only the listed commits |
+| `--commits <from>..<to>` | a git range | The commits of the range |
+| `--since <date>`, `--until <date>` | a date (`2026-10-01`) | Commits within a period; can be combined with `--commits N` |
+
+Reviewers look at the diff of these commits and what it affects; each finding is marked with its origin: introduced by a commit, aggravated by a commit, or pre-existing. Reports — `reports/<ID>.changes-<date>.md`, finding IDs — `SEC-c01`. Without a review list (`/revref review --commits 5`), a comprehensive review of the changes (QR) runs, like a pull request review.
+
 ### Other commands with arguments
 
 | Command | Argument | What it does |
@@ -313,6 +324,9 @@ The full pipeline is not mandatory: you can run any review on its own or build a
 /revref review TEST HYG DRY --fix       in turn: tests → cleanup → duplication, with fixes
 /revref review W2 DX --fix --optimal    all reviews of wave W2 plus DX, reordered according to the pipeline
 /revref review all                      reports for all applicable reviews
+/revref review --commits 5              a comprehensive review of the last five commits
+/revref review SEC BUG --since 2026-10-01 --until 2026-10-10   security and bugs in the commits of a period
+/revref review SEC --commits a1b2c3d,e4f5a6b                   only the listed commits
 ```
 
 - **List.** IDs separated by spaces or commas. Wave names (`W2`, `W5`…) expand to their reviews, `all` — to all applicable ones.

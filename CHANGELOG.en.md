@@ -8,6 +8,12 @@ Kit versions follow [semantic versioning](https://semver.org/). The current vers
 
 A version has a "Migration" section only if something has to be done to a run already in progress when moving to it. The orchestrator reads it on `resume` if the kit version has changed.
 
+## 3.6.0 — 2026-10-14
+
+- Review of changes: `review … --commits N`, `--commits <sha>,<sha>`, `--commits <from>..<to>`, `--since` / `--until` — any review is limited to the changes of the selected commits and what they affect.
+- Findings get an "Origin: introduced / aggravated / pre-existing" field; reports `reports/<ID>.changes-<date>.md`, finding IDs `<ID>-c<NN>`.
+- `review --commits N` without a review list — a comprehensive review of the changes (QR in changes mode), like a pull request review.
+
 ## 3.5.0 — 2026-10-13
 
 - **Independent check of every fix.** Before merging (and before a pending patch is queued) the finished branch is checked by a verifier who was not the author of the review or the change, with three questions: is the premise right (specification, appendices, decisions taken, real process), what the change forbids or changes for an honest user, regression risk (other clients, an old client during an update, minimum platforms, server and containers — with tests and code reading). New prompt `prompts/work/verify-fix.md` and template `templates/fix-check.md`.
