@@ -8,6 +8,11 @@ Kit versions follow [semantic versioning](https://semver.org/). The current vers
 
 A version has a "Migration" section only if something has to be done to a run already in progress when moving to it. The orchestrator reads it on `resume` if the kit version has changed.
 
+## 3.8.1 — 2026-10-24
+
+- `bin/update.sh` takes the installation folder from where the kit lies, not from a record in `INSTALL`: a project installation committed to git is updated in the clone where it is run, not in the folder on the machine of the first installation. Absolute paths are removed from `INSTALL`.
+- `.gitattributes` in the kit folder pins LF for `*.sh` in projects with `core.autocrlf=true`.
+
 ## 3.8.0 — 2026-10-24
 
 - **Kit update with confirmation:** `/revref update [vX.Y.Z]` for a project installation and a global one — checking releases in the source, a card with the changes from `CHANGELOG.md`, installation only after the owner's "yes" in the chat, with the same options as the first installation. Rollback — `update v<previous>`. Procedure — `PROTOCOLS.md` §11.

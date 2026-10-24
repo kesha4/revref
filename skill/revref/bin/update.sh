@@ -28,16 +28,21 @@ die() { say "Ошибка: $1" "Error: $2" >&2; exit 1; }
 
 source_url=${REVREF_UPDATE_SOURCE:-$(get source)}
 source_url=${source_url:-$official}
-scope=$(get scope); target=$(get target); project=$(get project)
-if [ -z "$scope" ]; then
+scope=$(get scope); target=""; project=""
+# Folders come from where the kit lies now, not from INSTALL: a project installation committed to git
+# is cloned to other folders and machines, and must update itself there.
+case "$skill" in
+    */skills/revref) target=${skill%/skills/revref} ;;
+esac
+if [ -z "$scope" ] && [ -n "$target" ]; then
     # Installed without INSTALL (older installer or a manual copy): infer from the path.
-    case "$skill" in
-        */.claude/skills/revref) project=${skill%/.claude/skills/revref}
-            if [ "$project/.claude" = "${CLAUDE_CONFIG_DIR:-$HOME/.claude}" ]; then scope=global; target="$project/.claude"; project=""; else scope=project; fi ;;
-        */skills/revref) scope=global; target=${skill%/skills/revref} ;;
-        *) scope=unknown ;;
-    esac
+    scope=global
+    case "$target" in */.claude) [ "$target" != "${CLAUDE_CONFIG_DIR:-$HOME/.claude}" ] && scope=project ;; esac
 fi
+if [ "$scope" = project ]; then
+    case "$target" in */.claude) project=${target%/.claude} ;; *) scope=unknown ;; esac
+fi
+[ -n "$target" ] || scope=unknown
 installed=$(tr -d '\r\n ' < "$skill/VERSION" 2>/dev/null)
 
 # gt A B — version A is newer than B.

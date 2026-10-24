@@ -80,6 +80,18 @@ CLAUDE_CONFIG_DIR="$home_cfg" sh "$skill/bin/update.sh" --apply "v$next" --expec
 [ "$(tr -d '\r\n' < "$skill/VERSION")" = "$next" ] && [ ! -d "$home_cfg/skills" ] \
     && ok "обновление в проекте; глобальная папка не тронута" || bad "обновление в проекте"
 
+# Установка в проект, закоммиченная в git и склонированная в другую папку, обновляется в клоне, а не в исходной.
+clone="$tmp/clone"; mkdir -p "$clone"; cp -R "$proj/.claude" "$clone/.claude"
+rm -rf "$clone/.claude/skills/revref.bak-"*
+printf '3.0.1\n' > "$clone/.claude/skills/revref/VERSION"
+baks_before=$(ls -d "$proj/.claude/skills/revref.bak-"* 2>/dev/null | wc -l)
+CLAUDE_CONFIG_DIR="$home_cfg" sh "$clone/.claude/skills/revref/bin/update.sh" --apply "v$next" --expect "$sha" >"$tmp/apply.log" 2>&1 || bad "клон --apply: $(cat "$tmp/apply.log")"
+baks_after=$(ls -d "$proj/.claude/skills/revref.bak-"* 2>/dev/null | wc -l)
+[ "$(tr -d '\r\n' < "$clone/.claude/skills/revref/VERSION")" = "$next" ] && [ "$baks_before" -eq "$baks_after" ] \
+    && ls -d "$clone/.claude/skills/revref.bak-"* >/dev/null 2>&1 \
+    && ok "клон установки в проект обновляется в клоне, исходная папка не тронута" || bad "клон обновил не ту папку"
+[ -f "$skill/.gitattributes" ] && grep -q 'eol=lf' "$skill/.gitattributes" && ok ".gitattributes набора закрепляет LF для скриптов" || bad "нет .gitattributes в наборе"
+
 # Неинтерактивный запуск без аргументов: показывает изменения и команду, но ничего не ставит.
 printf '3.0.1\n' > "$skill/VERSION"
 out=$(CLAUDE_CONFIG_DIR="$home_cfg" sh "$skill/bin/update.sh" </dev/null)

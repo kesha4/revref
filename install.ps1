@@ -88,6 +88,7 @@ foreach ($f in $files) {
 }
 
 # Сведения для bin/update.sh: откуда и с какими параметрами установлен набор. Логин и токен из URL не сохраняются.
+# Папки update.sh берёт из расположения набора: установка в проект переживает клонирование.
 $origin = ''
 if (Get-Command git -ErrorAction SilentlyContinue) {
     $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
@@ -97,14 +98,11 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
 }
 if (-not $origin) { $origin = 'https://github.com/kesha4/revref' }
 $scope = if ($Project) { 'project' } else { 'global' }
-$projectAbs = if ($Project) { (Resolve-Path -LiteralPath $Project).Path -replace '\\', '/' } else { '' }
 $installInfo = @(
     '# RevRef: сведения об установке для bin/update.sh. Пишет установщик.'
     "source=$origin"
     "lang=$Lang"
     "scope=$scope"
-    "target=$($target -replace '\\', '/')"
-    "project=$projectAbs"
     "installed_at=$(Get-Date -Format 'yyyy-MM-dd HH:mm')"
 ) -join "`n"
 [System.IO.File]::WriteAllText((Join-Path $skillDst 'INSTALL'), $installInfo + "`n", $utf8)

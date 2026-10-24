@@ -387,7 +387,7 @@ How to tell whether a run is in progress in another session: `STATE.md` has unfi
 
 ## §11. Kit update (`update`)
 
-The `bin/update.sh` script in the skill directory works with the source recorded by the installer in the `INSTALL` file: by default the kit's official repository. Only releases are installed — `vX.Y.Z` tags, never a branch. The installation options are kept: language, global or project, configuration folder.
+The `bin/update.sh` script in the skill directory works with the source recorded by the installer in the `INSTALL` file: by default the kit's official repository. Only releases are installed — `vX.Y.Z` tags, never a branch. The installation options are kept: language, global or project. The script takes the folder from where the kit lies, not from a record in `INSTALL`, so a project installation committed to git is updated in the clone where it is run.
 
 ### Where to look for installations
 
@@ -424,4 +424,4 @@ Only the owner runs it. It is not executed on its own, from `run` or because of 
    - On any other branch commit nothing — tell the owner which files changed.
 7. **After the update.** The kit text loaded into the session is outdated. Suggest restarting the Claude Code session and running `/revref resume`: §6, step 0, will apply the "Migration" sections. If the owner wants to continue in this session — re-read `SKILL.md` and the kit files from disk, then perform §6 from step 0.
 
-**Without `sh`** (Windows without Git Bash), perform the same steps manually using the data from `INSTALL`: `git ls-remote --tags <source>` → `git clone --depth 1 --branch vX.Y.Z <source> <temporary folder>` → `install.ps1 -Lang <language>` with `-Project <path>` for a project installation, and for a global one with `CLAUDE_CONFIG_DIR=<configuration folder>`.
+**Without `sh`** (Windows without Git Bash), perform the same steps manually: the source and language come from `INSTALL`, the installation folder is where the kit lies: `git ls-remote --tags <source>` → `git clone --depth 1 --branch vX.Y.Z <source> <temporary folder>` → `install.ps1 -Lang <language>` with `-Project <path>` for a project installation, and for a global one with `CLAUDE_CONFIG_DIR=<configuration folder>`.
