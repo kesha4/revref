@@ -30,6 +30,7 @@ The kit version is in the `VERSION` file, the change history is in `CHANGELOG.md
 | `templates/` | Templates for the files of the `.revref/` working folder and for a custom review | `init`, restoring damaged files |
 | `VERSION`, `CHANGELOG.md` | Kit version and change history | `init`, `resume`, `status` |
 | `hooks/guard.sh` | Guard hook: blocks dangerous git commands and committing secrets | Attached automatically |
+| `hooks/usage.sh` | Status line: saves token limit percentages; `--read` prints them for the orchestrator | Limit check (PIPELINE.md → "Time and token budget"); connected at `init` with the owner's consent |
 
 ## Commands
 
@@ -41,7 +42,7 @@ The kit version is in the `VERSION` file, the change history is in `CHANGELOG.md
 
 **`checkpoint`** — a full checkpoint per `PROTOCOLS.md` right now. Use it before ending a session or when you need to continue later in another session.
 
-**`status`** — read-only: from `STATE.md`, `PLAN.md`, `FINDINGS.md`, `DECISIONS.md`, output 10–15 lines: kit version (and a warning if it differs from the one recorded in `STATE.md`), wave and step, progress, finding counters by status, how many decisions are waiting for the owner by class, next actions. Change nothing.
+**`status`** — read-only: from `STATE.md`, `PLAN.md`, `FINDINGS.md`, `DECISIONS.md`, output 10–15 lines: kit version (and a warning if it differs from the one recorded in `STATE.md`), wave and step, progress, finding counters by status, how many decisions are waiting for the owner by class, token limit (`hooks/usage.sh --read` and the threshold from `CONFIG.md`; without data — "not tracked"), next actions. Change nothing.
 
 **`decisions`** — show the whole queue of decisions waiting for the owner (class C first, then B) and process owner answers already entered, per `PROTOCOLS.md`.
 

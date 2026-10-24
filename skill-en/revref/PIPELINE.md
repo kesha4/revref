@@ -114,10 +114,12 @@ If the gate is not passed:
    - autonomy level;
    - critical parts of the project;
    - what must not be touched;
-   - time budget;
+   - budget — time and token limit in one question, e.g. "3 days, stop at 95% of the weekly limit" (default: no time limit, 95% of the weekly limit);
    - whether push is allowed.
 
    Whatever you did not ask, determine yourself and mark it in `CONFIG.md` as an "assumption".
+
+   **Limit tracking.** If a limit threshold is set, run `sh "<skill directory>/hooks/usage.sh" --read`. If there is no data, the RevRef status line is not connected: offer the owner to connect it (PIPELINE.md → "Time and token budget" → "Connecting") and show the exact `settings.json` change. This is a setting outside the repository, so only after the owner's "yes" in the chat. Without consent or without data, write "Token limit: not tracked (no data)" in `CONFIG.md` and continue.
 4. **Project map** → `CONTEXT.md`: purpose, stack, modules and their responsibilities, entry points, external systems, size (files and lines by language); clients, platforms and environments; sources of intended behavior (the specification and its appendices, decisions taken, the real process).
 5. **Commands** → `CONTEXT.md`: install, run, tests, linter, type check, build, coverage, audit. Verify each command by running it.
 6. **Baseline** → `CONTEXT.md`: run all checks and record the results: number of tests and failures, linter warnings, type errors, run times, coverage and vulnerabilities, if available. What was failing before the run is not a regression, but a task for W2 or W3.
@@ -239,11 +241,50 @@ The `--commits`, `--since` and `--until` parameters of the `review` command narr
 - **W7 in parallel with W4–W6**, if the UI files do not overlap with the tasks of those waves.
 - **Fixes of different waves are not carried out simultaneously,** except for W7.
 
-## Time budget and early completion
+## Time and token budget
 
-- If `CONFIG.Time budget` is running out:
-  1. Finish the current task.
-  2. Mark the wave's remaining tasks "deferred (budget)".
-  3. Skip the remaining waves.
-  4. Perform a shortened W9: run the checks, `FINAL_REPORT.md`, checkpoint.
+### Time
+
+If `CONFIG.Time budget` is running out:
+
+1. Finish the current task.
+2. Mark the wave's remaining tasks "deferred (budget)".
+3. Skip the remaining waves.
+4. Perform a shortened W9: run the checks, `FINAL_REPORT.md`, checkpoint.
+
+### Token limit
+
+Claude Code reports subscription limit usage (Pro, Max) only to the status line command. The `hooks/usage.sh` script, connected as the status line, saves this data on every new agent message. The orchestrator reads it with `sh "<skill directory>/hooks/usage.sh" --read`: the weekly window (`week`), the five-hour window (`5h`), reset times and the age of the data. The limit is per account: the percentage includes subagents, other sessions and the owner's work outside the run.
+
+- **When to check:** before each wave step and each queue item, before launching each batch of subagents and after each merged task. The threshold is `CONFIG.Token limit`.
+- **10 percentage points before the threshold** (85% with a 95% threshold), tell the owner once in the chat and record it in `JOURNAL.md`. Do not launch look-ahead reviews of the next wave any more: their work is lost if the run stops mid-wave.
+- **Threshold reached** — a pause until the weekly window resets, not the end of the run:
+  1. Do not launch new tasks or subagents. Subagents already running finish their current task. Do not merge their branches: the fix check needs a new subagent. Record the branches in the "In progress" section of `STATE.md`.
+  2. Commit your own unfinished work as a WIP commit.
+  3. Make a full checkpoint (PROTOCOLS.md §5): "Checkpoint type" — "stopped: token limit", with the reset time; the first item of "Next actions" — where to continue after the reset.
+  4. Report in the chat: N% used with a P% threshold, reset at <date and time>, where you stopped. The run continues with `/revref resume` after the reset, or earlier if the owner raises the threshold, e.g. "limit 98%".
+
+  `FINAL_REPORT.md` is not written: the run is not finished. The headroom up to 100% is for the checkpoint and for the owner's own work.
+- **Five-hour window.** At 95% or more, make a full checkpoint in advance, with WIP commits, so that hitting the limit does not cut the work off without a record. Then continue. No more than once per window.
+- **No data.** The limit is not tracked if `--read` exits with code 1, the weekly window is missing from the data, or the data has not been updated for more than 30 minutes although you were working. Then tell the owner once, record it in `JOURNAL.md` and keep working; the time budget applies as usual. Do not estimate the percentage from your own token counts: that is unreliable. A window shown as `expired` has already reset — ignore its percentage.
+
+#### Connecting
+
+The status line is set in `settings.json` of the Claude Code configuration folder (`$CLAUDE_CONFIG_DIR` or `~/.claude`) — one for all projects:
+
+```json
+"statusLine": {
+  "type": "command",
+  "command": "f=\"<skill directory>/hooks/usage.sh\"; if [ -f \"$f\" ]; then sh -c \"$(tr -d '\\r' < \"$f\")\"; fi"
+}
+```
+
+- `<skill directory>` is an absolute path with forward slashes, as in the guard hook command in the `SKILL.md` frontmatter.
+- **If there already is a status line,** do not replace it silently: move the previous command, as one line, into the `revref/statusline-next` file of the same configuration folder. `usage.sh` saves the limits and prints what the previous command printed.
+- The data is saved to `revref/usage.json` in the configuration folder. It contains nothing beyond the status line data.
+- The change takes effect from the next agent message. On Windows the command runs in Git Bash, like the hooks.
+- Disconnecting: put the previous command from `revref/statusline-next` back into `statusLine`, or remove `statusLine`.
+
+### Settings changes during the run
+
 - If the owner changes `PLAN.md` or `CONFIG.md` during the run, the changes take effect at the boundary of the nearest step. Record this in `JOURNAL.md`.

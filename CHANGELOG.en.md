@@ -8,6 +8,16 @@ Kit versions follow [semantic versioning](https://semver.org/). The current vers
 
 A version has a "Migration" section only if something has to be done to a run already in progress when moving to it. The orchestrator reads it on `resume` if the kit version has changed.
 
+## 3.7.0 — 2026-10-24
+
+- **Token limit.** The run stops at a set share of the weekly subscription limit (95% by default): no new subagents, WIP commits and a full checkpoint, the window reset time in the message; after the reset, `resume`. A warning 10 points before the threshold; at 95% of the five-hour window, a checkpoint in advance. The budget question at `init` now includes the limit: "3 days, stop at 95% of the weekly limit".
+- `hooks/usage.sh` — a status line command: saves the `rate_limits` that Claude Code passes only to the status line and prints them for the orchestrator (`--read`). The owner's previous status line is kept via `revref/statusline-next`. Connected at `init` with the owner's consent or manually (README → "Token limit").
+- `CONFIG.md`: "Token limit"; `STATE.md`: checkpoint type "stopped: token limit"; `status` shows the limit. Test `scripts/test_usage.sh`.
+
+### Migration
+
+- If the `CONFIG.md` of a run in progress has no "Token limit" line, add "Token limit: 95% of the weekly limit (assumption)" and tell the owner. If `hooks/usage.sh --read` gives no data, offer to connect the status line; until consent, the limit is not tracked.
+
 ## 3.6.0 — 2026-10-14
 
 - Review of changes: `review … --commits N`, `--commits <sha>,<sha>`, `--commits <from>..<to>`, `--since` / `--until` — any review is limited to the changes of the selected commits and what they affect.

@@ -94,5 +94,6 @@ On any of the conditions below: stop the run, make a full checkpoint, report in 
 - Checks cannot be brought back to the baseline even by reverting the latest tasks.
 - Signs of compromise or an actively exploited vulnerability have been detected. Report immediately; after that, work only on this problem within W2 until the owner replies.
 - The time budget has run out (the completion procedure is in PIPELINE.md).
+- The weekly token limit threshold has been used (`CONFIG.Token limit`). This is a pause until the window resets; the procedure is in PIPELINE.md → "Time and token budget".
 
 **Not a reason to stop:** failure of an individual task (it gets the "blocked" status and work continues), questions for the owner (they go into the queue), class C findings (also into the queue).

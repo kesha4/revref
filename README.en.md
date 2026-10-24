@@ -116,7 +116,7 @@ powershell -ExecutionPolicy Bypass -File install.ps1 -Lang en
 
 ## Quick start
 
-1. Open the project in Claude Code and run `/revref init`. The agent asks up to 5 questions: autonomy level, critical parts, prohibitions, time budget, push. It then creates the run branch and the `.revref/` folder and records the baseline.
+1. Open the project in Claude Code and run `/revref init`. The agent asks up to 5 questions: autonomy level, critical parts, prohibitions, budget (time and token limit, e.g. "3 days, stop at 95% of the weekly limit"), push. If a limit threshold is set, the agent offers to connect the RevRef status line (see [Token limit](#token-limit)). It then creates the run branch and the `.revref/` folder and records the baseline.
 2. Check `.revref/CONFIG.md` and adjust it if needed.
 3. Run `/revref run`. From here the run proceeds autonomously.
 4. From time to time, run `/revref ask` to answer the most important questions right in the chat, or `/revref status` for a summary. The full queue is in `.revref/DECISIONS.md`.
@@ -183,6 +183,7 @@ Reviewers look at the diff of these commits and what it affects; each finding is
 | Scope | whole repository | include / exclude paths |
 | Parallelism | up to 4 subagents | a number |
 | Time budget | unlimited | a duration or a date |
+| Token limit | 95% of the weekly limit | N% of the weekly limit · do not track ([Token limit](#token-limit)) |
 | Run branch | `revref/YYYY-MM-DD` | branch name |
 | Main branch | `main` | branch name (the agent does not change it) |
 | Target branch (`finish`) | `test` | branch name |
@@ -432,6 +433,29 @@ The agent processes the answer at the next step boundary or on `/revref decision
   - mark affected findings as stale and recheck them;
   - update the baseline.
 
+### Token limit
+
+The run can stop on its own before it runs into the subscription limit: by default at 95% of the weekly limit. The threshold is set at `init` together with the time budget and can be changed in `CONFIG.md` or with a chat message such as "limit 98%".
+
+- **How the agent knows the percentage.** Claude Code passes Pro and Max subscription limit usage (`rate_limits.seven_day` and `five_hour`) only to the status line command. The `hooks/usage.sh` script, connected as the status line, saves this data to `~/.claude/revref/usage.json`, and the orchestrator reads it before each step and each launch of subagents. The limit is per account, so the percentage includes your other sessions too.
+- **10 points before the threshold** the agent warns once in the chat.
+- **At the threshold** the agent launches no new subagents, waits for the running ones, makes WIP commits and a full checkpoint. It then reports the percentage and the window reset time. This is a pause, not the end: after the reset, `/revref resume`.
+- **The five-hour window** does not stop the run: at 95% the agent makes a checkpoint in advance so that hitting the limit does not cut the work off without a record.
+- **Connecting.** At `init` the agent offers to add the status line to `settings.json` in the configuration folder (`~/.claude` or `$CLAUDE_CONFIG_DIR`) and does so only after your "yes". Manually:
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "f=\"<skill directory>/hooks/usage.sh\"; if [ -f \"$f\" ]; then sh -c \"$(tr -d '\\r' < \"$f\")\"; fi"
+  }
+}
+```
+
+  `<skill directory>` is the installation path with forward slashes, e.g. `C:/Users/me/.claude/skills/revref`. If you already have your own status line, move its command, as one line, into `~/.claude/revref/statusline-next`: RevRef saves the limits and shows your line unchanged.
+- **Without a status line** — in apps that do not have one, when signed in with an API key, or without Git Bash on Windows — the limit is not tracked: the agent says so once and works by the time budget.
+- The script is covered by tests: `sh scripts/test_usage.sh`.
+
 ## Without Claude Code or without subagents
 
 The kit also works in other agents (Cursor, Codex, Aider, etc.):
@@ -462,7 +486,7 @@ revref/
 ├── CHANGELOG.md, CHANGELOG.en.md
 ├── install.sh                installation: macOS, Linux, WSL, Git Bash
 ├── install.ps1               installation: Windows PowerShell 5.1, PowerShell 7+
-├── scripts/                  kit self-check and tests (check_kit.py, test_guard.sh, test_install.*)
+├── scripts/                  kit self-check and tests (check_kit.py, test_guard.sh, test_usage.sh, test_install.*)
 ├── .github/workflows/        checks in GitHub Actions on Windows, macOS and Linux
 ├── agents/                   → ~/.claude/agents/ (Russian version; English — agents-en/)
 │   ├── revref-reviewer.md
@@ -473,6 +497,7 @@ revref/
     ├── SKILL.md                /revref commands
     ├── VERSION                 kit version
     ├── hooks/guard.sh          guard hook
+    ├── hooks/usage.sh          status line: token limits for the orchestrator
     ├── ORCHESTRATOR.md         orchestrator role and main loop
     ├── PIPELINE.md             waves, steps, gates, overlaps, budget
     ├── POLICY.md               decision classes, labels, autonomy levels, git, prohibitions, stopping

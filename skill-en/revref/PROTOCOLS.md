@@ -98,6 +98,7 @@ Performed after each completed (merged) task and included in the task commit or 
 - Before ending a session and before a risky operation.
 - When the context has grown large.
 - Before waiting for long-running subagents.
+- At 95% of the five-hour limit window and when stopping on the weekly limit (PIPELINE.md → "Time and token budget").
 
 **Steps.**
 
@@ -119,6 +120,7 @@ Performed at the start of any session if `.revref/STATE.md` exists, and also aft
    - **newer, same major version** — continue. Read the `CHANGELOG.md` entries between the versions and carry out their "Migration" sections, if any. Write "kit updated X → Y" to `JOURNAL.md` and update the version in `STATE.md`. The new rules apply from this point on;
    - **different major version** — stop. Offer the owner a choice: finish the run on the old version (reinstall the kit from the repository tag `vX.Y.Z`) or perform the migration per `CHANGELOG.md`;
    - **older than recorded** (the kit was rolled back) — stop and ask the owner: the protocols are newer than the installed kit.
+   **Token limit.** If `CONFIG.md` sets a threshold, check the limit (`hooks/usage.sh --read`). If the threshold is still exceeded and the weekly window has not reset, do not continue the work: report the percentage, the threshold and the reset time, and offer the owner to wait for the reset or raise the threshold. After the reset or a new threshold, continue.
 1. **Reading.** In order: `CONFIG.md` → `STATE.md` → `CONTEXT.md` → the queue and answers in `DECISIONS.md` → the current wave in `PLAN.md` → the last ~20 entries of `JOURNAL.md`.
 2. **Reconciling with git.**
    - Current branch. If it is not the run branch and the working tree is clean — switch to the run branch. If it is not clean — figure out whose changes they are, without erasing anything.

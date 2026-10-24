@@ -4,7 +4,7 @@ A checkpoint for continuing in any session. Written only by the orchestrator. Re
 
 - Updated: YYYY-MM-DD HH:MM
 - Kit version: X.Y.Z                  <!-- from VERSION at init; changes only when the kit is updated per PROTOCOLS.md §6 -->
-- Checkpoint type: light | full | run finished | ready to merge | run merged into <branch> <hash> | PR created <link>
+- Checkpoint type: light | full | stopped: token limit (reset YYYY-MM-DD HH:MM) | run finished | ready to merge | run merged into <branch> <hash> | PR created <link>
 - Run branch: revref/YYYY-MM-DD
 - Run base commit: <hash> — where the run started
 - HEAD before checkpoint: <hash>

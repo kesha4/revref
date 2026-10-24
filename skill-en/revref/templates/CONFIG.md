@@ -21,6 +21,7 @@ This file is filled in by the owner. On `init` the agent creates a draft: it ask
 - Scope: whole repository                  <!-- include paths: … ; exclude paths: … -->
 - Parallelism: up to 4 subagents
 - Time budget: unlimited                   <!-- e.g.: 3 days, or until 2026-10-20 -->
+- Token limit: 95% of the weekly limit     <!-- N% of the weekly limit | do not track; pause until the window resets — PIPELINE.md → "Time and token budget" -->
 - Run branch: revref/YYYY-MM-DD
 - Main branch: main                        <!-- the run's base; the agent never changes it -->
 - Target branch (finish): test             <!-- where finish merges the result; usually synced with the test stand -->

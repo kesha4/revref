@@ -30,6 +30,9 @@ jobs:
       - name: Guard hook tests
         shell: bash
         run: sh scripts/test_guard.sh
+      - name: Status line script tests
+        shell: bash
+        run: sh scripts/test_usage.sh
       - name: install.sh
         shell: bash
         run: sh scripts/test_install.sh

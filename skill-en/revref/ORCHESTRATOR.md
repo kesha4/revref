@@ -42,6 +42,7 @@ while PLAN.md has unfinished waves:
   5. Gate          — checks no worse than the baseline, every finding of the wave has a final status
   6. Milestone     — JOURNAL, tag, full checkpoint, short message in the chat
   after each step: owner answers in DECISIONS.md (PROTOCOLS.md §7)
+  before each step and batch of subagents: time budget and token limit (PIPELINE.md)
 
 W9 → FINAL_REPORT.md, final checkpoint, summary message
 merge into the target branch (test) — only via the owner's finish command (PROTOCOLS.md §9); the agent does not change the main branch
