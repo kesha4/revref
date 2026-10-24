@@ -123,6 +123,9 @@ Review prompt files start with: `# <ID> — <English name>` then `Finding ID pre
 | «Лимит токенов: 95% недельного лимита» | "Token limit: 95% of the weekly limit" |
 | «остановлен: лимит токенов» | "stopped: token limit" |
 | статусная строка | status line |
+| «Обновление набора» | "Kit update" |
+| «Безопасная точка» | "Safe point" |
+| «Автоматическая проверка» | "Automatic check" |
 | пятичасовое окно / недельное окно | five-hour window / weekly window |
 | «Источник инструкций» | "Source of instructions" |
 | «Секреты» | "Secrets" |

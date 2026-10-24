@@ -24,7 +24,7 @@ try {
         & (Join-Path $root 'install.ps1') -Lang $lang | Out-Null
         $skill = Join-Path (Join-Path $cfg 'skills') 'revref'
         $srcSkill = if ($lang -eq 'en') { Join-Path (Join-Path $root 'skill-en') 'revref' } else { Join-Path (Join-Path $root 'skill') 'revref' }
-        $expected = (Get-ChildItem -Recurse -File -LiteralPath $srcSkill).Count + 1
+        $expected = (Get-ChildItem -Recurse -File -LiteralPath $srcSkill).Count + 2   # + CHANGELOG.md, INSTALL
         $actual = (Get-ChildItem -Recurse -File -LiteralPath $skill).Count
         if ($actual -eq $expected) { Ok "[$lang] skill files: $actual" } else { Bad "[$lang] skill files $actual, expected $expected" }
         $files = @(Join-Path $skill 'SKILL.md') + (@('revref-reviewer.md', 'revref-verifier.md', 'revref-fixer.md') | ForEach-Object { Join-Path (Join-Path $cfg 'agents') $_ })

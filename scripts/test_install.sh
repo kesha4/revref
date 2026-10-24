@@ -21,7 +21,7 @@ for lang in ru en; do
     src_skill="$root/skill/revref"; [ "$lang" = en ] && src_skill="$root/skill-en/revref"
     CLAUDE_CONFIG_DIR="$cfg" sh "$root/install.sh" --lang "$lang" >/dev/null || { bad "[$lang] install.sh завершился с ошибкой"; continue; }
     skill="$cfg/skills/revref"
-    expected=$(( $(find "$src_skill" -type f | wc -l) + 1 ))   # + CHANGELOG.md
+    expected=$(( $(find "$src_skill" -type f | wc -l) + 2 ))   # + CHANGELOG.md, INSTALL
     actual=$(find "$skill" -type f | wc -l)
     [ "$actual" -eq "$expected" ] && ok "[$lang] файлов скилла: $actual" || bad "[$lang] файлов скилла $actual, ожидалось $expected"
     for f in "$skill/SKILL.md" "$cfg/agents/revref-reviewer.md" "$cfg/agents/revref-verifier.md" "$cfg/agents/revref-fixer.md"; do

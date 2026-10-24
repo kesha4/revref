@@ -470,13 +470,30 @@ The individual review prompts from `skill-en/revref/prompts/reviews/`, together 
 - **Recording in the run.** On `init`, the version is written to `STATE.md`. On `resume`, the agent compares it with the installed one:
   - same major version — continues, performs the "Migration" sections from `CHANGELOG.md` (if any) and records the update in the journal;
   - a different major version or a rollback of the kit to an older version — stops and asks the owner.
-- **Updating:**
+- **Updating right from Claude Code:** `/revref update` — for a project installation and a global one. The agent:
+  - finds the installations and compares their versions with the latest release in the source;
+  - shows a card: where it is installed, the current and new versions, the release commit, the gist of `CHANGELOG.md` and the "Migration" sections;
+  - installs only after your "yes" in the chat — in the same language and to the same place as the first installation.
+
+  `/revref update v3.8.0` installs a specific version; a rollback works the same way. A rollback to a version before 3.8.0 is possible, but `update` is unavailable after it: such versions have no `bin/update.sh` yet.
+- **Automatic check.** At the start of `init`, `run`, `resume` and `status` the agent checks whether a new version is out, at most once a day. If it is — one line in the chat suggesting an update. The check itself installs nothing. Disable the check: `REVREF_UPDATE_CHECK=off`.
+- **From a terminal** — the same with a `[y/N]` question:
+
+  ```bash
+  sh ~/.claude/skills/revref/bin/update.sh
+  ```
+
+  For a project installation — `sh <project>/.claude/skills/revref/bin/update.sh`.
+- **Protection.** Only releases are installed — `vX.Y.Z` tags from the source recorded at installation in the `INSTALL` file (this repository by default), never a branch. The release commit is compared between showing the card and installing. A login and token in the source address are not saved in `INSTALL`. The update is not performed while subagents are working: the agent makes a full checkpoint first. The agent recommends installing a major version between runs.
+- **After the update,** restart the session and run `/revref resume`: the agent applies the "Migration" sections to the run in progress. If the kit is installed in the project and kept in git, on the run branch the agent commits the update as a separate `revref(kit): …` commit.
+- **Manually** — as for versions before 3.8.0, which do not have `bin/update.sh` yet:
 
   ```bash
   git pull && ./install.sh --lang en
   ```
 
   Reinstalling keeps the previous version of the skill next to it with the suffix `.bak-<date>`. A specific version can be installed from a tag: `git checkout v3.1.0 && ./install.sh --lang en`.
+- The update script is covered by tests: `sh scripts/test_update.sh`.
 
 ## Kit contents
 
@@ -486,7 +503,7 @@ revref/
 ├── CHANGELOG.md, CHANGELOG.en.md
 ├── install.sh                installation: macOS, Linux, WSL, Git Bash
 ├── install.ps1               installation: Windows PowerShell 5.1, PowerShell 7+
-├── scripts/                  kit self-check and tests (check_kit.py, test_guard.sh, test_usage.sh, test_install.*)
+├── scripts/                  kit self-check and tests (check_kit.py, test_guard.sh, test_usage.sh, test_update.sh, test_install.*)
 ├── .github/workflows/        checks in GitHub Actions on Windows, macOS and Linux
 ├── agents/                   → ~/.claude/agents/ (Russian version; English — agents-en/)
 │   ├── revref-reviewer.md
@@ -498,6 +515,7 @@ revref/
     ├── VERSION                 kit version
     ├── hooks/guard.sh          guard hook
     ├── hooks/usage.sh          status line: token limits for the orchestrator
+    ├── bin/update.sh           checking for and installing a new version (/revref update)
     ├── ORCHESTRATOR.md         orchestrator role and main loop
     ├── PIPELINE.md             waves, steps, gates, overlaps, budget
     ├── POLICY.md               decision classes, labels, autonomy levels, git, prohibitions, stopping

@@ -87,6 +87,29 @@ foreach ($f in $files) {
     [System.IO.File]::WriteAllText($f, $text, $utf8)
 }
 
+# Сведения для bin/update.sh: откуда и с какими параметрами установлен набор. Логин и токен из URL не сохраняются.
+$origin = ''
+if (Get-Command git -ErrorAction SilentlyContinue) {
+    $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+    $origin = (git -C $src remote get-url origin 2>$null | Select-Object -First 1)
+    $ErrorActionPreference = $prev
+    if ($origin) { $origin = $origin -replace '://[^/@]*@', '://' } else { $origin = '' }
+}
+if (-not $origin) { $origin = 'https://github.com/kesha4/revref' }
+$scope = if ($Project) { 'project' } else { 'global' }
+$projectAbs = if ($Project) { (Resolve-Path -LiteralPath $Project).Path -replace '\\', '/' } else { '' }
+$installInfo = @(
+    '# RevRef: сведения об установке для bin/update.sh. Пишет установщик.'
+    "source=$origin"
+    "lang=$Lang"
+    "scope=$scope"
+    "target=$($target -replace '\\', '/')"
+    "project=$projectAbs"
+    "installed_at=$(Get-Date -Format 'yyyy-MM-dd HH:mm')"
+) -join "`n"
+[System.IO.File]::WriteAllText((Join-Path $skillDst 'INSTALL'), $installInfo + "`n", $utf8)
+
 Write-Host "Скилл:   $skillDst (язык: $Lang, версия: $((Get-Content -LiteralPath (Join-Path $skillDst 'VERSION') -TotalCount 1)))"
 Write-Host "Агенты:  $agentsDst (revref-reviewer, revref-verifier, revref-fixer)"
+Write-Host "Обновление: /revref update в Claude Code или sh `"$skillPath/bin/update.sh`" в терминале"
 Write-Host 'Перезапустите сессию Claude Code и выполните в проекте: /revref init'

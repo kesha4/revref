@@ -8,6 +8,18 @@ Kit versions follow [semantic versioning](https://semver.org/). The current vers
 
 A version has a "Migration" section only if something has to be done to a run already in progress when moving to it. The orchestrator reads it on `resume` if the kit version has changed.
 
+## 3.8.0 — 2026-10-24
+
+- **Kit update with confirmation:** `/revref update [vX.Y.Z]` for a project installation and a global one — checking releases in the source, a card with the changes from `CHANGELOG.md`, installation only after the owner's "yes" in the chat, with the same options as the first installation. Rollback — `update v<previous>`. Procedure — `PROTOCOLS.md` §11.
+- Automatic check for a new version at the start of `init`, `run`, `resume`, `status` — at most once a day, one line in the chat, installs nothing; `REVREF_UPDATE_CHECK=off` disables it.
+- `bin/update.sh`: `--check`, `--prepare`, `--apply vX.Y.Z --expect <commit>` and an interactive `[y/N]` mode for a terminal. Only `vX.Y.Z` tags, the commit is compared between the check and the installation.
+- The installers write `INSTALL` — the source (without login and token), language, global or project, configuration folder.
+- POLICY: checking for updates is an allowed request to an external system; the update and connecting the status line are changes outside the repository only after the owner's "yes". Test `scripts/test_update.sh`.
+
+### Migration
+
+- Installations of 3.7.0 and earlier have no `bin/update.sh` and `INSTALL`: update them to 3.8.0 manually (`git pull && ./install.sh`), then use `/revref update`.
+
 ## 3.7.0 — 2026-10-24
 
 - **Token limit.** The run stops at a set share of the weekly subscription limit (95% by default): no new subagents, WIP commits and a full checkpoint, the window reset time in the message; after the reset, `resume`. A warning 10 points before the threshold; at 95% of the five-hour window, a checkpoint in advance. The budget question at `init` now includes the limit: "3 days, stop at 95% of the weekly limit".

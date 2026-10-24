@@ -83,6 +83,22 @@ for name in $agents; do
     set_hook_path "$agents_dst/$name"
 done
 
+# Сведения для bin/update.sh: откуда и с какими параметрами установлен набор. Логин и токен из URL не сохраняются.
+origin=""
+command -v git >/dev/null 2>&1 && origin=$(git -C "$src" remote get-url origin 2>/dev/null | sed 's|://[^/@]*@|://|') || true
+scope=global; project_abs=""
+if [ -n "$project" ]; then scope=project; project_abs=$(cd "$project" && pwd); fi
+cat > "$skill_dst/INSTALL" <<EOF
+# RevRef: сведения об установке для bin/update.sh. Пишет установщик.
+source=${origin:-https://github.com/kesha4/revref}
+lang=$lang
+scope=$scope
+target=$target
+project=$project_abs
+installed_at=$(date '+%Y-%m-%d %H:%M')
+EOF
+
 echo "Скилл:   $skill_dst (язык: $lang, версия: $(cat "$skill_dst/VERSION"))"
 echo "Агенты:  $agents_dst (revref-reviewer, revref-verifier, revref-fixer)"
+echo "Обновление: /revref update в Claude Code или sh \"$skill_dst/bin/update.sh\" в терминале"
 echo "Перезапустите сессию Claude Code и выполните в проекте: /revref init"

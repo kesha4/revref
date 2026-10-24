@@ -33,6 +33,9 @@ jobs:
       - name: Status line script tests
         shell: bash
         run: sh scripts/test_usage.sh
+      - name: Update script tests
+        shell: bash
+        run: sh scripts/test_update.sh
       - name: install.sh
         shell: bash
         run: sh scripts/test_install.sh

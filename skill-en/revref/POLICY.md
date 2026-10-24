@@ -80,9 +80,9 @@ The agent may raise the class of any label if it considers it necessary in a spe
 
 - Operations on real data: running migrations, cleanup, import and export outside the test environment.
 - Changing secrets, keys, credentials, CI secrets, production environment variables.
-- Deployment, publishing packages and releases, sending messages and requests to external systems, except reading documentation and package registries.
+- Deployment, publishing packages and releases, sending messages and requests to external systems, except reading documentation and package registries and checking for kit updates in its source (`PROTOCOLS.md` §11).
 - Changing the project's license.
-- Changes outside the repository.
+- Changes outside the repository. Exceptions — only after the owner's "yes" in the chat to a specific question: updating the kit (`update`) and connecting the status line at `init`.
 - Disabling or weakening tests and checks to get a green run. A flaky test is marked and fixed, not silently deleted.
 
 ## Stop conditions

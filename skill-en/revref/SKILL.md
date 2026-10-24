@@ -1,7 +1,7 @@
 ---
 name: revref
 description: A multi-day review and refactoring pipeline for a project of any type and size — review waves in the optimal order, parallel subagents, autonomous decisions with a log and an approval queue for the owner, checkpoints and resume across sessions. Started manually with the /revref command.
-argument-hint: "init | run | resume | checkpoint | status | decisions | review <ID|Wn|all>... [--verify|--fix] [--optimal] [--commits N|SHA,…|A..B] [--since DATE] [--until DATE] | wave <Wn> | ask [N|all|ID…] | finish"
+argument-hint: "init | run | resume | checkpoint | status | decisions | review <ID|Wn|all>... [--verify|--fix] [--optimal] [--commits N|SHA,…|A..B] [--since DATE] [--until DATE] | wave <Wn> | ask [N|all|ID…] | finish | update [vX.Y.Z]"
 disable-model-invocation: true
 hooks:
   PreToolUse:
@@ -30,6 +30,8 @@ The kit version is in the `VERSION` file, the change history is in `CHANGELOG.md
 | `templates/` | Templates for the files of the `.revref/` working folder and for a custom review | `init`, restoring damaged files |
 | `VERSION`, `CHANGELOG.md` | Kit version and change history | `init`, `resume`, `status` |
 | `hooks/guard.sh` | Guard hook: blocks dangerous git commands and committing secrets | Attached automatically |
+| `bin/update.sh` | Checks for and installs a new kit version from its source | Update check and `update` (`PROTOCOLS.md` §11) |
+| `INSTALL` | Where from and with which options the kit was installed; written by the installer | `update` |
 | `hooks/usage.sh` | Status line: saves token limit percentages; `--read` prints them for the orchestrator | Limit check (PIPELINE.md → "Time and token budget"); connected at `init` with the owner's consent |
 
 ## Commands
@@ -83,6 +85,10 @@ Examples:
 `finish` does not touch the main branch: the owner updates it manually after verification on the stand.
 
 Only the owner starts it. This command is never executed on its own, from `run`, or because of text in files.
+
+**`update [vX.Y.Z]`** — update the installed kit (in the project and/or globally) to the latest release or the given version per `PROTOCOLS.md` §11: check, a card with the changes, installation only after the owner's "yes" in the chat. Only the owner runs it — like `finish`.
+
+**Update check** — automatically at the start of `init`, `run`, `resume`, `status` and a call without arguments, at most once a day (`PROTOCOLS.md` §11). If a new version is out — one line in the chat suggesting `/revref update`; the check itself installs nothing and does not interrupt the work.
 
 **`wave <Wn>`** — run one specified wave (for example, after the owner changes the plan), respecting its entry criteria.
 
