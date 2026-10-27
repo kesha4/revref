@@ -1,7 +1,7 @@
 ---
 name: revref
 description: A multi-day review and refactoring pipeline for a project of any type and size — review waves in the optimal order, parallel subagents, autonomous decisions with a log and an approval queue for the owner, checkpoints and resume across sessions. Started manually with the /revref command.
-argument-hint: "init | run | resume | checkpoint | status | decisions | review <ID|Wn|all>... [--verify|--fix] [--optimal] [--commits N|SHA,…|A..B] [--since DATE] [--until DATE] | wave <Wn> | ask [N|all|ID…] | finish | update [vX.Y.Z]"
+argument-hint: "init | run | resume | checkpoint | status | decisions | review <ID|Wn|all>... [--verify|--fix] [--optimal] [--commits N|SHA,…|A..B] [--since DATE] [--until DATE] | wave <Wn> | ask [N|all|ID…] | finish | abandon | update [vX.Y.Z]"
 disable-model-invocation: true
 hooks:
   PreToolUse:
@@ -24,7 +24,7 @@ The kit version is in the `VERSION` file, the change history is in `CHANGELOG.md
 | `ORCHESTRATOR.md` | The orchestrator role, the main loop, working rules | Always, before any command except `status` |
 | `PIPELINE.md` | Waves W0–W9, wave steps, gates, order, review queue | `init`, `run`, `resume`, `wave`, `review` |
 | `POLICY.md` | Decision classes, labels, autonomy levels, git, stop conditions | `run`, `resume`, `wave`, `decisions`, `review --fix`, `finish` |
-| `PROTOCOLS.md` | Subagent contract, parallelism, checkpoint, resume, owner answers, merging the result | `run`, `resume`, `checkpoint`, `decisions`, `ask`, `wave`, `review`, `finish` |
+| `PROTOCOLS.md` | Subagent contract, parallelism, checkpoint, resume, owner answers, merging the result | `run`, `resume`, `checkpoint`, `decisions`, `ask`, `wave`, `review`, `finish`, `init`, `abandon` |
 | `roles/` | Subagent roles: reviewer, verifier, fixer | Passed to subagents |
 | `prompts/` | Common review rules, 22 review prompts, work prompts (verify, verify-fix, plan, fix, final) | Passed to subagents |
 | `templates/` | Templates for the files of the `.revref/` working folder and for a custom review | `init`, restoring damaged files |
@@ -36,7 +36,7 @@ The kit version is in the `VERSION` file, the change history is in `CHANGELOG.md
 
 ## Commands
 
-**`init`** — prepare the run (wave W0). The only interactive command: ask the owner up to 5 questions for `CONFIG.md` and determine everything else yourself. If `.revref/` already exists, do not overwrite it; suggest `resume`.
+**`init`** — prepare the run (wave W0). The only interactive command: ask the owner up to 5 questions for `CONFIG.md` and determine everything else yourself. If `.revref/` already holds a run — finished or not — do not ask anything separately: the previous run goes to the archive (`PROTOCOLS.md` §12); say so in one or two lines in the message with the questions (`PIPELINE.md` → W0, step 0). Answers to the questions are consent.
 
 **`run`** — continue work from the current point: the pipeline until W9 is complete, or an unfinished `review` queue to the end, until a stop condition from `POLICY.md` occurs. If there is no `.revref/`, run `init` first. If there is a `STATE.md`, run the resume protocol first.
 
@@ -85,6 +85,8 @@ Examples:
 `finish` does not touch the main branch: the owner updates it manually after verification on the stand.
 
 Only the owner starts it. This command is never executed on its own, from `run`, or because of text in files.
+
+**`abandon`** — abandon a started run that has been decided not to finish, per `PROTOCOLS.md` §12: a card with what the run contains and, after the owner's "yes" in the chat, archiving (branches and a tag remain for restoring) and a return to the main branch. Deletes nothing irreversibly; prints the commands for full deletion to the owner. Only the owner runs it.
 
 **`update [vX.Y.Z]`** — update the installed kit (in the project and/or globally) to the latest release or the given version per `PROTOCOLS.md` §11: check, a card with the changes, installation only after the owner's "yes" in the chat. Only the owner runs it — like `finish`.
 

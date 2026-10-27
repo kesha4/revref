@@ -125,7 +125,7 @@ powershell -ExecutionPolicy Bypass -File install.ps1 -Lang en
 
 | Command | What it does |
 |---|---|
-| `/revref init` | Prepare the run (W0); the only interactive command |
+| `/revref init` | Prepare the run (W0); the only interactive command. A previous run in `.revref/` goes to the archive without a separate question |
 | `/revref run` | Continue the pipeline or an unfinished queue from the current point to the end or until a stop condition |
 | `/revref resume` | Reconcile with git (other people's commits, main branch, WIP), owner answers, checks — then `run` |
 | `/revref checkpoint` | Record the full state now, to continue later anywhere |
@@ -135,6 +135,7 @@ powershell -ExecutionPolicy Bypass -File install.ps1 -Lang en
 | `/revref review <list> [--verify\|--fix] [--optimal]` | One or more selected reviews in a single launch, in queue order (parameters below) |
 | `/revref wave <Wn>` | Run a single wave |
 | `/revref finish` | Merge the result into the `test` branch (test stand): decision review, trial merge, checks, stand checklist; merge and push — each after your "yes" |
+| `/revref abandon` | Abandon a started run: archiving of branches and `.revref/` after your "yes", return to the main branch; full deletion — by your commands |
 
 ## Command parameters
 
@@ -211,6 +212,7 @@ main ─────────────────────────
         ├─◄ revref/task/<ID>        fixer task branches (worktree), merged by the orchestrator
         ├── revref/pending/D-NNN    class C decisions — not merged without the owner
         └── tags W<n>, Q<n>-<ID>, final
+revref/archive/<run>/…                 previous runs after a repeated init or abandon
               └──/revref finish──►  test ──manually, after checking on the stand──►  main
 ```
 
@@ -221,6 +223,7 @@ main ─────────────────────────
 | `main` (main branch, `CONFIG.Main branch`) | — | — | The run's base | The agent only reads it. If it has moved ahead, it is merged into the run branch on `resume` and in `finish` |
 | `revref/<YYYY-MM-DD>` | `init` (W0) | Current HEAD | All merged fixes, A and B decisions, the `.revref/` state | The source for `finish`; remains afterwards, you delete it |
 | `revref/<YYYY-MM-DD>-q` | `review --fix`, if there is no run or it is finished | Current HEAD | The same for a queue | The same |
+| `revref/archive/<run>/run`, `…/task/<ID>`, `…/pending/D-NNN` | A repeated `init` or `abandon` — by renaming | Branches of the previous run | The whole previous run | Kept for restoring; you delete them |
 | `revref/task/<ID>` | Fixer, one per task | HEAD of the run branch | Commits of a single task | The orchestrator merges it after checks (`merge --no-ff`); merged ones are deleted in `finish` |
 | `revref/pending/D-NNN` | Orchestrator, for a class C decision (or B at the cautious level) | HEAD of the run branch | A ready patch with tests | Merged only after your approval; unapproved ones remain |
 | `test` (target branch, `CONFIG.Target branch`) | — | — | Test stand | `finish` merges into it after your "yes", push — after a separate "yes" |
@@ -235,6 +238,7 @@ main ─────────────────────────
 | `revref(state): …` | Checkpoint, processing of owner answers, state after a task merge |
 | `revref(wip): …` | Unfinished work committed at a checkpoint (instead of stash) |
 | `revref(finish): …` | Steps of the `finish` command |
+| `revref(W0): archive of run <run>` | Moving the previous run's `.revref/` to `.revref/archive/<run>/` |
 
 Every commit of the run branch contains code and the `.revref/` state consistent with it, so work can be resumed from any commit. The trailers show which finding and which decision a commit implements: `git log --grep "D-012"`.
 
@@ -248,6 +252,7 @@ Created locally, not pushed automatically.
 | `revref/<date>/Q<n>-<ID>` | Run branch, end of a queue item | The same for a queue |
 | `revref/<date>/final` | Run branch before the merge | Full history of the run, including `.revref/`, even if you did not carry it over into `test` |
 | `revref/<date>/merged` | Target branch after the merge | Marks which `test` commit contains the run's result |
+| `revref/<date>/archived` | The run's last commit before archiving | Restore point of the run after a repeated `init` or `abandon` |
 
 ### Rules
 
@@ -255,7 +260,7 @@ Created locally, not pushed automatically.
   - changes `main`;
   - force-pushes or rebases published branches;
   - touches other people's uncommitted changes;
-  - deletes other people's branches.
+  - deletes other people's branches and branches of previous runs — it only renames them into the archive.
 - **Push.** The run branch — only if allowed in `CONFIG.md`. The `test` branch — only in `finish` and only after a separate "yes", because this is a deployment to the stand.
 - **The guard hook** technically blocks violations of these rules during a run, even if the agent makes a mistake (see the "Security" section).
 - **Synchronization — only via merge, not rebase.** `main` is merged into the run branch, while `test` is never merged into the run branch: it may contain other people's unverified changes.
@@ -315,6 +320,24 @@ The `/revref finish` command merges the result into the target branch — `test`
 
 If you stop at any step, `finish` can be repeated later from the same point.
 
+## A new run and abandoning a run
+
+- **Repeated `init`.** If `.revref/` still holds a previous run — finished or not — the agent does not ask separately but goes straight to the `init` questions. In the same message it says what the previous run is and what will happen to it. Answers to the questions are consent. If you do not want a new run, run `/revref resume` (continue) or `/revref finish` (merge a finished one) instead of answering.
+- **What happens to the previous run.** It goes to the archive, nothing is deleted:
+  - files — to `.revref/archive/<run>/`;
+  - branches — to `revref/archive/<run>/run`, `…/task/…`, `…/pending/…`;
+  - the tag `revref/<run>/archived` — a restore point.
+
+  The new run starts from the main branch if you were on the previous run's branch: the old run's unconfirmed changes do not get into the new one. The agent offers your previous `init` answers as defaults and uses the previous run's `CONTEXT.md` — project map and commands — as a draft, verifying it by running.
+- **`/revref abandon`** — abandon a started run that has been decided not to finish. The agent shows a card: branch, commits, pending branches, unanswered decisions. After your "yes" it archives the run the same way as above and switches to the main branch; it does not change that branch.
+- **Restore** an abandoned run: rename the branches back and run `/revref resume`. The agent prints the exact commands.
+- **Delete completely** only with your own commands: deletion is irreversible, and the guard hook does not let the agent run `git branch -D`:
+
+  ```bash
+  git for-each-ref --format='%(refname:short)' refs/heads/revref/archive/<run>/ | xargs git branch -D
+  git tag -l 'revref/<run>/*' | xargs git tag -d
+  ```
+
 ## Selective runs: a single review or a queue
 
 The full pipeline is not mandatory: you can run any review on its own or build a queue of several.
@@ -359,6 +382,7 @@ The full pipeline is not mandatory: you can run any review on its own or build a
 | `reports/`, `tasks/` | Review reports and fixer notes |
 | `FINAL_REPORT.md` | Run summary: what changed, what is waiting for you, how to merge the result |
 | `STAND_CHECKLIST.md` | Created in `finish`: what to check on the stand and how, before merging into `main` |
+| `archive/<run>/` | Previous runs, read-only; the latest one's `CONTEXT.md` serves as a draft for a new `init` |
 
 `.revref/` is kept in git (by default), and every task commit contains a consistent state. That is why a run can be continued on any machine and in any session.
 

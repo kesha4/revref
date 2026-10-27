@@ -125,6 +125,11 @@ Review prompt files start with: `# <ID> — <English name>` then `Finding ID pre
 | статусная строка | status line |
 | «Обновление набора» | "Kit update" |
 | «Безопасная точка» | "Safe point" |
+| «Архив и отказ от прогона» | "Archive and abandoning a run" |
+| «Архивирование прогона» | "Archiving a run" |
+| «Отказ от прогона» | "Abandoning a run" |
+| «Прежний прогон» | "Previous run" |
+| архив прогона <прогон> (коммит) | archive of run <run> |
 | «Автоматическая проверка» | "Automatic check" |
 | пятичасовое окно / недельное окно | five-hour window / weekly window |
 | «Источник инструкций» | "Source of instructions" |

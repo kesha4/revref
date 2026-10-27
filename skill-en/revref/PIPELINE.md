@@ -105,10 +105,19 @@ If the gate is not passed:
 
 ## W0 — Preparation
 
+0. **Previous run.** If `.revref/` contains `STATE.md` (a folder with only `archive/` does not count), do not ask for a separate confirmation. In the message with the step 3 questions, say in one or two lines:
+   - what the previous run is: merged into the target branch / finished but not merged / not finished (wave and step); how many decisions are left unanswered;
+   - what happens to it: it goes to the archive per PROTOCOLS.md §12 — files to `.revref/archive/<run>/`, branches to `revref/archive/<run>/…`, nothing is deleted;
+   - what to answer instead if a new run is not wanted: not finished — `/revref resume`; finished but not merged — `/revref finish`.
+
+   Answers to the questions are consent to archiving; it is done in step 1. Offer the values from the archived `CONFIG.md` as defaults in the questions ("as last time: …").
 1. **Git.**
    - If there is no repository — stop and suggest `git init`.
-   - If the working tree has uncommitted changes — do not touch them: ask the owner whether to commit them separately or abort the start.
-   - Create the run branch from `CONFIG` (by default `revref/<YYYY-MM-DD>`) from the current HEAD.
+   - If the working tree has uncommitted changes other than your own unfinished work of the previous run — do not touch them: ask the owner whether to commit them separately or abort the start.
+   - Previous run — archiving, steps 1–4 (PROTOCOLS.md §12).
+   - **Base of the new branch** — the current HEAD. If the current branch is the previous run's branch or another `revref/*`, the base is the main branch (`CONFIG.Main branch` of the previous run, by default `main`): a new run must not start from the old one's unconfirmed changes.
+   - Create the run branch from `CONFIG` (by default `revref/<YYYY-MM-DD>`). If such a branch or `revref/<YYYY-MM-DD>/…` tags already exist, add the suffix `-2`, `-3`… The branch name without `revref/` is the run name in tags and the archive.
+   - Previous run — archiving step 5 in the new branch: if it contains the previous run's `.revref/`, move it to `.revref/archive/<run>/` with the commit `revref(W0): archive of run <run>`.
 2. **Working folder.** Create `.revref/` from `templates/` (except `report.md`, `task.md` and `custom-review.md` — these are templates for reports, tasks and custom reviews), as well as `reports/`, `tasks/` and `reviews/`. Write the kit version from `VERSION` to `STATE.md`.
 3. **Questions for the owner** — up to 5, the only interactive point of the run:
    - autonomy level;
@@ -120,6 +129,7 @@ If the gate is not passed:
    Whatever you did not ask, determine yourself and mark it in `CONFIG.md` as an "assumption".
 
    **Limit tracking.** If a limit threshold is set, run `sh "<skill directory>/hooks/usage.sh" --read`. If there is no data, the RevRef status line is not connected: offer the owner to connect it (PIPELINE.md → "Time and token budget" → "Connecting") and show the exact `settings.json` change. This is a setting outside the repository, so only after the owner's "yes" in the chat. Without consent or without data, write "Token limit: not tracked (no data)" in `CONFIG.md` and continue.
+   **Archived `CONTEXT.md`.** If `.revref/archive/` holds previous runs, take the latest one's `CONTEXT.md` as a draft for steps 4–5: check the map against the current code and verify every command by running it again. Carry over "Owner instructions" with a reference to the archive. Always take the baseline (step 6) anew.
 4. **Project map** → `CONTEXT.md`: purpose, stack, modules and their responsibilities, entry points, external systems, size (files and lines by language); clients, platforms and environments; sources of intended behavior (the specification and its appendices, decisions taken, the real process).
 5. **Commands** → `CONTEXT.md`: install, run, tests, linter, type check, build, coverage, audit. Verify each command by running it.
 6. **Baseline** → `CONTEXT.md`: run all checks and record the results: number of tests and failures, linter warnings, type errors, run times, coverage and vulnerabilities, if available. What was failing before the run is not a regression, but a task for W2 or W3.

@@ -8,6 +8,12 @@ Kit versions follow [semantic versioning](https://semver.org/). The current vers
 
 A version has a "Migration" section only if something has to be done to a run already in progress when moving to it. The orchestrator reads it on `resume` if the kit version has changed.
 
+## 3.9.0 — 2026-10-27
+
+- **Repeated `init` without a separate confirmation.** If `.revref/` still holds a previous run — finished or not — the agent goes straight to the `init` questions and says in the same message what will happen to the previous run; answers are consent. The previous run goes to the archive: files to `.revref/archive/<run>/`, branches to `revref/archive/<run>/…`, tag `revref/<run>/archived`. The new run starts from the main branch if HEAD was on the previous run's branch; the branch name gets the suffix `-2`, `-3` if the date is taken. Previous answers are the defaults, the archived `CONTEXT.md` is a draft of the map and commands.
+- **`/revref abandon`** — abandoning a started run: a card and, after the owner's "yes", archiving and a return to the main branch. Nothing is deleted irreversibly; the agent prints the commands for full deletion and for restoring to the owner.
+- PROTOCOLS §12 "Archive and abandoning a run"; POLICY: branches of previous runs are only renamed into the archive.
+
 ## 3.8.1 — 2026-10-24
 
 - `bin/update.sh` takes the installation folder from where the kit lies, not from a record in `INSTALL`: a project installation committed to git is updated in the clone where it is run, not in the folder on the machine of the first installation. Absolute paths are removed from `INSTALL`.

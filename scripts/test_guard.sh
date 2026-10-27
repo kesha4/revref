@@ -61,6 +61,12 @@ check 0 "$repo" 'git rebase --abort'
 check 0 "$repo" 'git push --follow-tags origin revref/2026-10-13'
 check 0 "$repo" 'git log --oneline main..HEAD'
 check 0 "$repo" 'git status' PowerShell
+# Архивирование прогона (PROTOCOLS.md §12): переименование веток, тег, перенос .revref/ — разрешены.
+check 0 "$repo" 'git branch -m revref/2026-10-13 revref/archive/2026-10-13/run'
+check 0 "$repo" 'git branch -m revref/pending/D-001 revref/archive/2026-10-13/pending/D-001'
+check 0 "$repo" 'git tag revref/2026-10-13/archived'
+check 0 "$repo" 'git mv .revref/STATE.md .revref/archive/2026-10-13/STATE.md'
+check 2 "$repo" "git for-each-ref --format='%(refname:short)' refs/heads/revref/archive/2026-10-13/ | xargs git branch -D"
 # Путь в стиле Windows (C:\...), как его передаёт Claude Code на Windows
 if command -v cygpath >/dev/null 2>&1; then
     check 2 "$(cygpath -w "$repo")" 'git push --force'
