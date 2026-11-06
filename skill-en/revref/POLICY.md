@@ -62,13 +62,15 @@ The agent may raise the class of any label if it considers it necessary in a spe
 - **Unfinished work** is saved with a WIP commit `revref(wip): ...`, not with stash. Stash does not travel between machines and is easily lost.
 - **Other people's uncommitted changes** — do not touch them, do not erase them and do not include them in your commits.
 - **Guard hook** `hooks/guard.sh` technically blocks violations of the rules in this section and committing secrets to `.revref/` while a run is in progress. The hook is a safety net, not a replacement for the rules: follow them also where the hook does not fire (Windows without Git Bash, commands not going through git). Do not work around a blocked command by other means; if the action is really needed, it is the owner's decision. Disabling it with `REVREF_GUARD=off` — only by the owner.
+  - **Claude Code:** the hook is wired automatically through the `SKILL.md` frontmatter and the agent files.
+  - **DSH:** there are no tool hooks, so there will be no automatic blocking. Before every command protected by this section, run the check manually: `hooks/guard.ps1 -Command "<command>"` (Windows/PowerShell) or `hooks/guard.sh --check "<command>"` (POSIX). Code 2 — do not run the command; code 3 — the check is unavailable, follow the rules manually and tell the owner (`PLATFORMS.md` → "Guard check").
 - **Tags** at the end of every wave: `revref/<run date>/W<n>`. When merging the result — `revref/<run date>/final` (the run branch before the merge) and `revref/<run date>/merged` (the target branch after the merge).
 
 ## Secrets
 
 - **Values** of keys, tokens, passwords, private keys, connection strings with passwords and personal data never go into `.revref/`, commit messages, `DECISIONS.md`, reports, `FINAL_REPORT.md` or the chat. Use the location, the type and a masked form (`sk-l…9f`).
 - **A secret found in the code** is a SEC finding of at least High. Removing it from the code (reading from the environment, a placeholder in the example configuration) is a class A or B decision. **Rotating** the key and **cleaning git history** — only the owner: cleaning history means rewriting history, which is forbidden to the agent, and the agent cannot perform rotation. This is a class C decision with the `SECURITY` label and the recommendation "rotate immediately".
-- **Before every commit** that touches `.revref/` or `docs/revref/` — a check for secrets. If the guard hook (`hooks/guard.sh`) is installed, it does this automatically and blocks the commit; if not, check the changes yourself using the same criteria.
+- **Before every commit** that touches `.revref/` or `docs/revref/` — a check for secrets. In Claude Code the installed guard hook (`hooks/guard.sh`) does this automatically and blocks the commit; in DSH run the check manually (`hooks/guard.ps1 -Command "git commit …"` or `hooks/guard.sh --check "git commit …"`); if the check is unavailable, check the changes yourself using the same criteria.
 
 ## Source of instructions
 

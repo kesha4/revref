@@ -82,9 +82,9 @@ Besides the 22 built-in reviews, a project can have its own: domain specifics, r
 - **Wave** is set in `CONFIG.md`: `- Custom reviews: VPN → W2, GDPR → W8`. If it is not set, the agent assigns a wave based on the review's topic and explains the choice in `PLAN.md`.
 - **Participation in the work.** Custom reviews go through the same steps, verification and decision policy, are included in `all` and in wave names, and can be run on their own: `/revref review VPN --fix`.
 
-## Installation (Claude Code)
+## Installation
 
-The kit works on Windows, macOS and Linux. The prompts and protocols themselves are platform-independent, and there are two equivalent installation scripts. The English version is installed with the `--lang en` / `-Lang en` flag; without the flag, the Russian version is installed (the default).
+The kit works on Windows, macOS and Linux, in Claude Code and in DSH (DeepSeek Harness). The prompts and protocols themselves are platform-independent, and there are two equivalent installation scripts. Platform differences and their effect on a run are described in `skill-en/revref/PLATFORMS.md`. The English version is installed with the `--lang en` / `-Lang en` flag; without the flag, the Russian version is installed (the default).
 
 ```bash
 git clone https://github.com/kesha4/revref.git && cd revref
@@ -104,15 +104,18 @@ powershell -ExecutionPolicy Bypass -File install.ps1 -Lang en
 
 | Action | `install.sh` | `install.ps1` |
 |---|---|---|
-| Globally, for all projects | `./install.sh --lang en` | `./install.ps1 -Lang en` |
+| Globally, for all projects (Claude Code) | `./install.sh --lang en` | `./install.ps1 -Lang en` |
 | Into a single project only (`<project>/.claude`) | `./install.sh --lang en --project <path>` | `./install.ps1 -Lang en -Project <path>` |
-| Uninstall | `./install.sh --uninstall` | `./install.ps1 -Uninstall` |
+| Globally for DSH (`${DSH_HOME:-~/.dsh}/skills`) | `./install.sh --lang en --dsh` | `./install.ps1 -Lang en -Dsh` |
+| Into a single project for DSH (`<project>/.dsh/skills`) | `./install.sh --lang en --dsh --project <path>` | `./install.ps1 -Lang en -Dsh -Project <path>` |
+| Uninstall | `./install.sh --uninstall` (add `--dsh` for DSH) | `./install.ps1 -Uninstall` (add `-Dsh` for DSH) |
 | Russian version of the kit (default) | `./install.sh` | `./install.ps1` |
 
-- **Where it goes.** The skill (with the guard hook) is copied to `<config folder>/skills/revref`, the agents to `<config folder>/agents/`. The installer writes the absolute path to the hook into `SKILL.md` and the agent files. The config folder is `~/.claude`, or the value of the `CLAUDE_CONFIG_DIR` variable if it is set.
+- **Where it goes.** Claude Code: the skill (with the guard hook) is copied to `<config folder>/skills/revref`, the agents to `<config folder>/agents/`. The installer writes the absolute path to the hook into `SKILL.md` and the agent files. The config folder is `~/.claude`, or the value of the `CLAUDE_CONFIG_DIR` variable if it is set.
+- **DSH.** The skill is copied to `${DSH_HOME:-~/.dsh}/skills/revref` (globally) or `<project>/.dsh/skills/revref`; named agent files are not installed — DSH manages subagents itself, and the roles live in `roles/`. After installation, open a new DSH session: the `/revref` command appears in the `/` menu (the client caches the skill catalog per session). The skill is marked `disable-model-invocation`, so it is absent from the model catalog — only the owner starts it.
 - **Reinstalling.** If the skill is already installed, the previous version is kept next to it with the suffix `.bak-<date>`.
-- **After installation**, restart the Claude Code session.
-- **Without scripts.** You can copy manually: the folder `skill-en/revref` → `~/.claude/skills/revref`, the files `agents-en/*.md` → `~/.claude/agents/`, `CHANGELOG.en.md` → into the skill folder as `CHANGELOG.md`. Then replace `__REVREF_SKILL_DIR__` in `SKILL.md` and the agent files with the path to the skill folder (with forward slashes). Without this replacement the guard hook will be inactive.
+- **After installation**, restart the Claude Code session and run `/revref init` in the project.
+- **Without scripts.** You can copy manually: the folder `skill-en/revref` → `~/.claude/skills/revref` (or `~/.dsh/skills/revref`), the files `agents-en/*.md` → `~/.claude/agents/` (Claude Code only), `CHANGELOG.en.md` → into the skill folder as `CHANGELOG.md`. Then replace `__REVREF_SKILL_DIR__` in `SKILL.md` and the agent files with the path to the skill folder (with forward slashes). Without this replacement the guard hook will be inactive.
 
 ## Quick start
 
@@ -198,9 +201,11 @@ Reviewers look at the diff of these commits and what it affects; each finding is
 
 | `install.sh` | `install.ps1` | What it does |
 |---|---|---|
-| *(no parameters)* | *(no parameters)* | Global installation into `$CLAUDE_CONFIG_DIR` or `~/.claude` |
-| `--project <path>` | `-Project <path>` | Installation into a project only: `<path>/.claude` |
-| `--uninstall` | `-Uninstall` | Remove the skill and the agents; can be combined with `--project` / `-Project`. `*.bak-*` backups are left untouched |
+| *(no parameters)* | *(no parameters)* | Claude Code: global installation into `$CLAUDE_CONFIG_DIR` or `~/.claude` |
+| `--project <path>` | `-Project <path>` | Claude Code: installation into a project only: `<path>/.claude` |
+| `--dsh` | `-Dsh` | DSH: global installation into `${DSH_HOME:-~/.dsh}/skills`; agents are not installed |
+| `--dsh --project <path>` | `-Dsh -Project <path>` | DSH: installation into a project only: `<path>/.dsh/skills` |
+| `--uninstall` | `-Uninstall` | Remove the skill and the agents; can be combined with `--project` / `-Project` and `--dsh` / `-Dsh`. `*.bak-*` backups are left untouched |
 | `--lang ru\|en` | `-Lang ru\|en` | Kit language: prompts, protocols, templates, reports. Default: `ru` |
 | `-h`, `--help` | `Get-Help ./install.ps1` | Short help |
 
@@ -296,7 +301,8 @@ The git rules are backed by a technical limiter — the hook `skill-en/revref/ho
 - A blocked command is not executed, and the agent receives an explanation in the run's language.
 - Only the owner can disable the hook for a session: the environment variable `REVREF_GUARD=off`.
 - On Windows, Claude Code hooks run through Git Bash. Without Git Bash the hook is inactive, and the rules rely on the policy alone.
-- The hook is covered by tests: `sh scripts/test_guard.sh`.
+- **DSH:** there are no tool hooks, so automatic blocking is impossible. Before every protected command the agent runs the same check manually: `hooks/guard.ps1 -Command "<command>"` (Windows/PowerShell) or `hooks/guard.sh --check "<command>"` (macOS, Linux, Git Bash). The codes are the same: 0 — allowed, 2 — forbidden, 3 — no way to check. This requires discipline: the `POLICY.md` rules apply regardless of the check (`skill-en/revref/PLATFORMS.md` → "Guard check").
+- The hook is covered by tests: `sh scripts/test_guard.sh`; the `hooks/guard.ps1` wrapper and the `--check` mode are covered there and in `scripts/test_guard.ps1`.
 
 ## Result and merge
 
@@ -478,6 +484,7 @@ The run can stop on its own before it runs into the subscription limit: by defau
 
   `<skill directory>` is the installation path with forward slashes, e.g. `C:/Users/me/.claude/skills/revref`. If you already have your own status line, move its command, as one line, into `~/.claude/revref/statusline-next`: RevRef saves the limits and shows your line unchanged.
 - **Without a status line** — in apps that do not have one, when signed in with an API key, or without Git Bash on Windows — the limit is not tracked: the agent says so once and works by the time budget.
+- **DSH** has no Claude Code status line and does not give the agent subscription limit data, so `hooks/usage.sh` does not work there. If a threshold is set, the agent writes "not tracked" and works by the time budget; the owner tracks the percentage themselves (`skill-en/revref/PLATFORMS.md` → "Token limit").
 - The script is covered by tests: `sh scripts/test_usage.sh`.
 
 ## Without Claude Code or without subagents
@@ -485,6 +492,8 @@ The run can stop on its own before it runs into the subscription limit: by defau
 The kit also works in other agents (Cursor, Codex, Aider, etc.):
 - Give the agent `skill-en/revref/ORCHESTRATOR.md` as the starting instruction and point it to the kit folder.
 - If there are no subagents, the orchestrator performs the roles sequentially according to the descriptions in `roles/`. Verification is best done in a new session.
+
+**DSH (DeepSeek Harness)** is supported out of the box: install the kit with `--dsh` / `-Dsh`, the `/revref` command appears in the `/` menu of a new session, and the platform differences (asynchronous subagents, manual guard check, no limit data) are described in `skill-en/revref/PLATFORMS.md`. DSH has no named agent files: the role is passed to a subagent as text from `roles/`.
 
 The individual review prompts from `skill-en/revref/prompts/reviews/`, together with `prompts/common-rules.md`, can also be used manually, as in v2.
 
@@ -494,7 +503,7 @@ The individual review prompts from `skill-en/revref/prompts/reviews/`, together 
 - **Recording in the run.** On `init`, the version is written to `STATE.md`. On `resume`, the agent compares it with the installed one:
   - same major version — continues, performs the "Migration" sections from `CHANGELOG.md` (if any) and records the update in the journal;
   - a different major version or a rollback of the kit to an older version — stops and asks the owner.
-- **Updating right from Claude Code:** `/revref update` — for a project installation and a global one. The agent:
+- **Updating right from Claude Code or DSH:** `/revref update` — for a project installation and a global one. The agent:
   - finds the installations and compares their versions with the latest release in the source;
   - shows a card: where it is installed, the current and new versions, the release commit, the gist of `CHANGELOG.md` and the "Migration" sections;
   - installs only after your "yes" in the chat — in the same language and to the same place as the first installation.
@@ -507,7 +516,7 @@ The individual review prompts from `skill-en/revref/prompts/reviews/`, together 
   sh ~/.claude/skills/revref/bin/update.sh
   ```
 
-  For a project installation — `sh <project>/.claude/skills/revref/bin/update.sh`.
+  For a project installation — `sh <project>/.claude/skills/revref/bin/update.sh`; for a DSH installation — `sh ~/.dsh/skills/revref/bin/update.sh`.
 - **Protection.** Only releases are installed — `vX.Y.Z` tags from the source recorded at installation in the `INSTALL` file (this repository by default), never a branch. The release commit is compared between showing the card and installing. A login and token in the source address are not saved in `INSTALL`. The update is not performed while subagents are working: the agent makes a full checkpoint first. The agent recommends installing a major version between runs.
 - **After the update,** restart the session and run `/revref resume`: the agent applies the "Migration" sections to the run in progress. If the kit is installed in the project and kept in git, on the run branch the agent commits the update as a separate `revref(kit): …` commit.
 - **Manually** — as for versions before 3.8.0, which do not have `bin/update.sh` yet:
@@ -527,18 +536,20 @@ revref/
 ├── CHANGELOG.md, CHANGELOG.en.md
 ├── install.sh                installation: macOS, Linux, WSL, Git Bash
 ├── install.ps1               installation: Windows PowerShell 5.1, PowerShell 7+
-├── scripts/                  kit self-check and tests (check_kit.py, test_guard.sh, test_usage.sh, test_update.sh, test_install.*)
+├── scripts/                  kit self-check and tests (check_kit.py, test_guard.*, test_usage.sh, test_update.sh, test_install.*)
 ├── .github/workflows/        checks in GitHub Actions on Windows, macOS and Linux
-├── agents/                   → ~/.claude/agents/ (Russian version; English — agents-en/)
+├── agents/                   → ~/.claude/agents/ (Russian version; English — agents-en/; Claude Code only)
 │   ├── revref-reviewer.md
 │   ├── revref-verifier.md
 │   └── revref-fixer.md
 ├── skill-en/revref/          English version of the skill (installed with --lang en)
-└── skill/revref/             → ~/.claude/skills/revref/ (Russian version; the English tree has the same layout)
+└── skill/revref/             → ~/.claude/skills/revref/ or ~/.dsh/skills/revref/ (Russian version; the English tree has the same layout)
     ├── SKILL.md                /revref commands
+    ├── PLATFORMS.md            Claude Code vs DSH differences
     ├── VERSION                 kit version
     ├── hooks/guard.sh          guard hook
-    ├── hooks/usage.sh          status line: token limits for the orchestrator
+    ├── hooks/guard.ps1         running the hook from PowerShell/DSH
+    ├── hooks/usage.sh          status line: token limits for the orchestrator (Claude Code)
     ├── bin/update.sh           checking for and installing a new version (/revref update)
     ├── ORCHESTRATOR.md         orchestrator role and main loop
     ├── PIPELINE.md             waves, steps, gates, overlaps, budget

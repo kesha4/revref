@@ -43,6 +43,26 @@ for lang in ru en; do
     { [ ! -d "$skill" ] && [ ! -f "$cfg/agents/revref-fixer.md" ]; } && ok "[$lang] удаление" || bad "[$lang] удаление оставило файлы"
 done
 
+# --- DSH: установка в DSH-корень, без агентов, с platform=dsh, и установка в проект ---
+for lang in ru en; do
+    dsh_home="$tmp/dsh-$lang"
+    DSH_HOME="$dsh_home" sh "$root/install.sh" --dsh --lang "$lang" >/dev/null || { bad "[$lang] install.sh --dsh завершился с ошибкой"; continue; }
+    skill="$dsh_home/skills/revref"
+    [ -f "$skill/SKILL.md" ] && ok "[$lang] DSH: скилл установлен" || bad "[$lang] DSH: нет SKILL.md"
+    [ -f "$skill/hooks/guard.ps1" ] && ok "[$lang] DSH: guard.ps1 на месте" || bad "[$lang] DSH: нет hooks/guard.ps1"
+    [ ! -d "$dsh_home/agents" ] && ok "[$lang] DSH: агенты не устанавливаются" || bad "[$lang] DSH: появился каталог agents"
+    grep -q '^platform=dsh$' "$skill/INSTALL" && ok "[$lang] DSH: INSTALL содержит platform=dsh" || bad "[$lang] DSH: INSTALL без platform"
+    if grep -q '__REVREF_SKILL_DIR__' "$skill/SKILL.md"; then bad "[$lang] DSH: плейсхолдер не заменён"; else ok "[$lang] DSH: путь к хуку подставлен"; fi
+    ( cd "$repo" && sh "$skill/hooks/guard.sh" --check 'git push --force' >/dev/null 2>&1; [ $? -eq 2 ] ) \
+        && ok "[$lang] DSH: установленный guard блокирует force-push" || bad "[$lang] DSH: установленный guard не блокирует"
+    DSH_HOME="$dsh_home" sh "$root/install.sh" --dsh --uninstall >/dev/null
+    [ ! -d "$skill" ] && ok "[$lang] DSH: удаление" || bad "[$lang] DSH: удаление оставило файлы"
+done
+dsh_proj="$tmp/dsh proj"; mkdir -p "$dsh_proj"
+sh "$root/install.sh" --dsh --project "$dsh_proj" >/dev/null 2>"$tmp/dsh-err" \
+    && [ -f "$dsh_proj/.dsh/skills/revref/SKILL.md" ] \
+    && ok "DSH: установка в проект (<путь>/.dsh/skills)" || bad "DSH: установка в проект: $(cat "$tmp/dsh-err")"
+
 proj="$tmp/proj dir"; mkdir -p "$proj"
 if sh "$root/install.sh" --project "$proj" >/dev/null 2>"$tmp/err" && [ ! -s "$tmp/err" ] \
     && [ -f "$proj/.claude/skills/revref/SKILL.md" ] \

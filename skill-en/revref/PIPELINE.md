@@ -266,6 +266,8 @@ If `CONFIG.Time budget` is running out:
 
 Claude Code reports subscription limit usage (Pro, Max) only to the status line command. The `hooks/usage.sh` script, connected as the status line, saves this data on every new agent message. The orchestrator reads it with `sh "<skill directory>/hooks/usage.sh" --read`: the weekly window (`week`), the five-hour window (`5h`), reset times and the age of the data. The limit is per account: the percentage includes subagents, other sessions and the owner's work outside the run.
 
+**In DSH** there is no status line and no agent access to subscription limit data, and `hooks/usage.sh` does not work. If `CONFIG.md` sets a threshold, write "not tracked" at `init` and in `status`, tell the owner once, and rely on the time budget from then on (`PLATFORMS.md` → "Token limit"). The run does not stop on the threshold in DSH; do not estimate the percentage from your own token counts.
+
 - **When to check:** before each wave step and each queue item, before launching each batch of subagents and after each merged task. The threshold is `CONFIG.Token limit`.
 - **10 percentage points before the threshold** (85% with a 95% threshold), tell the owner once in the chat and record it in `JOURNAL.md`. Do not launch look-ahead reviews of the next wave any more: their work is lost if the run stops mid-wave.
 - **Threshold reached** — a pause until the weekly window resets, not the end of the run:

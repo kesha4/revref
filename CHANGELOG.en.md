@@ -8,6 +8,14 @@ Kit versions follow [semantic versioning](https://semver.org/). The current vers
 
 A version has a "Migration" section only if something has to be done to a run already in progress when moving to it. The orchestrator reads it on `resume` if the kit version has changed.
 
+## 3.10.0 — 2026-11-07
+
+- **DSH (DeepSeek Harness).** The kit installs and works in DSH: `./install.sh --dsh` / `./install.ps1 -Dsh` copy the skill to `${DSH_HOME:-~/.dsh}/skills/revref` (globally) or `<project>/.dsh/skills/revref` (with `--project` / `-Project`); named agent files are not installed — roles are passed to subagents as text from `roles/`. After installation `/revref` appears in the `/` menu of a new DSH session. The new `PLATFORMS.md` describes the platform differences: tools, asynchronous subagents (`subagent`), manual worktrees, shell, guard check, token limit, sessions, command arguments, project instructions (AGENTS.md).
+- **Guard check in DSH.** DSH has no tool hooks, so automatic blocking is impossible: added the `hooks/guard.sh --check "<command>" [folder]` mode and the `hooks/guard.ps1 -Command "<command>"` wrapper for Windows/PowerShell. In DSH the orchestrator must run the check before every command protected by `POLICY.md` → "Git" (codes: 0 — allowed, 2 — forbidden, 3 — no way to check). In Claude Code everything works automatically as before.
+- **Installation and updates.** `INSTALL` now records `platform` (`claude` or `dsh`), `bin/update.sh` updates the installation in its platform and tells older installations apart by their path (`.dsh`, `.agents` — DSH, `.claude` — Claude Code); a project update for DSH commits the `.dsh/skills/revref` paths.
+- **Kit texts.** `SKILL.md`, `ORCHESTRATOR.md`, `PROTOCOLS.md`, `PIPELINE.md` and `POLICY.md` gained platform notes: in DSH command arguments are read from the owner's message (there is no `$ARGUMENTS` substitution), message delivery happens at a step boundary, worktree and subagent handling, and the token limit is not tracked.
+- **Tests.** Added `scripts/test_guard.ps1`, the `--check` mode in `scripts/test_guard.sh`, and DSH scenarios in `scripts/test_install.sh`, `scripts/test_install.ps1` and `scripts/test_update.sh`.
+
 ## 3.9.0 — 2026-10-27
 
 - **Repeated `init` without a separate confirmation.** If `.revref/` still holds a previous run — finished or not — the agent goes straight to the `init` questions and says in the same message what will happen to the previous run; answers are consent. The previous run goes to the archive: files to `.revref/archive/<run>/`, branches to `revref/archive/<run>/…`, tag `revref/<run>/archived`. The new run starts from the main branch if HEAD was on the previous run's branch; the branch name gets the suffix `-2`, `-3` if the date is taken. Previous answers are the defaults, the archived `CONTEXT.md` is a draft of the map and commands.

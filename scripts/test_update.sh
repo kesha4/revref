@@ -69,6 +69,36 @@ for lang in ru en; do
 done
 unset CLAUDE_CONFIG_DIR
 
+# --- DSH: глобальная установка обновляется в DSH-корне, проектная — в <проект>/.dsh ---
+export REVREF_DATA_DIR="$tmp/dsh-data"
+dsh_home="$tmp/dsh-home"
+git -C "$src" checkout -q "v$cur"
+DSH_HOME="$dsh_home" sh "$src/install.sh" --dsh >/dev/null || bad "DSH: установка"
+git -C "$src" checkout -q main
+skill="$dsh_home/skills/revref"
+grep -q '^platform=dsh$' "$skill/INSTALL" && grep -q '^scope=global$' "$skill/INSTALL" \
+    && ok "DSH INSTALL: глобальная установка, platform=dsh" || bad "DSH INSTALL: $(cat "$skill/INSTALL")"
+out=$(DSH_HOME="$dsh_home" sh "$skill/bin/update.sh" --check --force)
+case "$out" in *"latest: $next"*"status: update-available"*) ok "DSH --check: доступна $next" ;; *) bad "DSH --check: $out" ;; esac
+DSH_HOME="$dsh_home" sh "$skill/bin/update.sh" --apply "v$next" --expect "$sha" >"$tmp/apply-dsh.log" 2>&1 \
+    || bad "DSH --apply: $(cat "$tmp/apply-dsh.log")"
+[ "$(tr -d '\r\n' < "$skill/VERSION")" = "$next" ] && ok "DSH: обновлено до $next" || bad "DSH: версия после обновления $(cat "$skill/VERSION")"
+grep -q '^platform=dsh$' "$skill/INSTALL" && ok "DSH: platform сохранён после обновления" || bad "DSH: INSTALL после обновления"
+ls -d "$dsh_home/skills/revref.bak-"* >/dev/null 2>&1 && ok "DSH: прежняя версия сохранена" || bad "DSH: нет резервной копии"
+
+dsh_proj="$tmp/dsh proj"; mkdir -p "$dsh_proj"
+git -C "$src" checkout -q "v$cur"
+sh "$src/install.sh" --dsh --project "$dsh_proj" >/dev/null || bad "DSH проект: установка"
+git -C "$src" checkout -q main
+skill="$dsh_proj/.dsh/skills/revref"
+grep -q '^scope=project$' "$skill/INSTALL" && grep -q '^platform=dsh$' "$skill/INSTALL" \
+    && ok "DSH INSTALL проекта: scope=project, platform=dsh" || bad "DSH INSTALL проекта: $(cat "$skill/INSTALL")"
+DSH_HOME="$dsh_home" sh "$skill/bin/update.sh" --apply "v$next" --expect "$sha" >"$tmp/apply-dsh2.log" 2>&1 \
+    || bad "DSH проект --apply: $(cat "$tmp/apply-dsh2.log")"
+[ "$(tr -d '\r\n' < "$skill/VERSION")" = "$next" ] && ok "DSH проект: обновлено до $next" || bad "DSH проект: версия после обновления"
+[ ! -d "$dsh_proj/.claude" ] && ok "DSH проект: каталог .claude не создан" || bad "DSH проект: появился .claude"
+unset DSH_HOME REVREF_DATA_DIR
+
 # Установка в проект (путь с пробелом): обновление остаётся в проекте, глобальная папка не затрагивается.
 proj="$tmp/my proj"; mkdir -p "$proj"; home_cfg="$tmp/home-cfg"
 git -C "$src" checkout -q "v$cur"

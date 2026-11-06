@@ -23,7 +23,7 @@ BUILTIN_IDS = ['QR', 'SEC', 'DEP', 'BUG', 'DATA', 'EDGE', 'RES', 'TEST', 'DX', '
 AGENTS = ['revref-reviewer.md', 'revref-verifier.md', 'revref-fixer.md']
 PLACEHOLDER = '__REVREF_SKILL_DIR__'
 KIT_REF = re.compile(r'`((?:prompts|templates|roles|hooks)/[A-Za-z0-9_./<>-]+|'
-                     r'(?:ORCHESTRATOR|PIPELINE|POLICY|PROTOCOLS|SKILL)\.md|VERSION)`')
+                     r'(?:ORCHESTRATOR|PIPELINE|POLICY|PROTOCOLS|SKILL|PLATFORMS)\.md|VERSION)`')
 SECTION_REF = re.compile(r'PROTOCOLS\.md`?\s*§\s*(\d+)|§\s*(\d+)')
 
 errors = []
@@ -106,6 +106,13 @@ def check_tree(lang, skill, agents, changelog, readme):
             err(f'[{lang}] {f.relative_to(ROOT)}: во frontmatter нет хука guard с {PLACEHOLDER}')
     if not (skill / 'hooks' / 'guard.sh').exists():
         err(f'[{lang}] нет hooks/guard.sh')
+    # DSH / PowerShell entry point for the guard (PLATFORMS.md) and the platform mention in SKILL.md.
+    if not (skill / 'hooks' / 'guard.ps1').exists():
+        err(f'[{lang}] нет hooks/guard.ps1 (запуск хука из PowerShell/DSH)')
+    if 'PLATFORMS.md' not in read(skill / 'SKILL.md'):
+        err(f'[{lang}] SKILL.md не ссылается на PLATFORMS.md')
+    if not (skill / 'PLATFORMS.md').exists():
+        err(f'[{lang}] нет PLATFORMS.md')
     # README relative links
     if readme.exists():
         for target in re.findall(r'\]\(([^)#:]+)(?:#[^)]*)?\)', read(readme)):
@@ -148,6 +155,15 @@ if ru and en:
 ps1 = ROOT / 'install.ps1'
 if not ps1.read_bytes().startswith(b'\xef\xbb\xbf'):
     err('install.ps1: нет UTF-8 BOM — Windows PowerShell 5.1 исказит кириллицу')
+
+# DSH installation support and the platform recorded in INSTALL.
+for path, needle, label in ((ROOT / 'install.sh', '--dsh', 'install.sh: нет флага --dsh'),
+                            (ROOT / 'install.ps1', '-Dsh', 'install.ps1: нет параметра -Dsh'),
+                            (ROOT / 'skill' / 'revref' / 'bin' / 'update.sh', 'platform', 'bin/update.sh: нет учёта платформы'),
+                            (ROOT / 'install.sh', 'platform=$platform', 'install.sh: INSTALL без platform'),
+                            (ROOT / 'install.ps1', 'platform=$platform', 'install.ps1: INSTALL без platform')):
+    if not path.exists() or needle not in read(path):
+        err(label)
 
 if errors:
     print(f'check_kit: ошибок {len(errors)}')

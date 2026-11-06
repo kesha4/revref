@@ -13,7 +13,9 @@ hooks:
 
 # RevRef
 
-Invocation arguments: `$ARGUMENTS`
+Invocation arguments — the rest of the owner's message after `/revref` (for example `init`, `run`, `review SEC --verify`, `ask 3`). Claude Code substitutes them for `$ARGUMENTS`; DSH substitutes nothing — read the arguments from the message itself.
+
+**Platform.** Before the first command, detect the platform and read its section in `PLATFORMS.md`: Claude Code and DSH differ in tools, subagents and the guard check. The essentials for DSH: hooks from the frontmatter do not run (the guard is started manually, `PLATFORMS.md` → "Guard check"), subagents are asynchronous (`subagent`), and the token limit is not tracked.
 
 All kit files live next to this SKILL.md (the skill's base directory). When you pass prompt paths to subagents, give absolute paths from this directory.
 
@@ -21,6 +23,7 @@ The kit version is in the `VERSION` file, the change history is in `CHANGELOG.md
 
 | File | What it contains | When to read |
 |---|---|---|
+| `PLATFORMS.md` | Differences between Claude Code and DSH: tools, subagents, shell, guard check, token limit, installation | Always, before the first command |
 | `ORCHESTRATOR.md` | The orchestrator role, the main loop, working rules | Always, before any command except `status` |
 | `PIPELINE.md` | Waves W0–W9, wave steps, gates, order, review queue | `init`, `run`, `resume`, `wave`, `review` |
 | `POLICY.md` | Decision classes, labels, autonomy levels, git, stop conditions | `run`, `resume`, `wave`, `decisions`, `review --fix`, `finish` |
@@ -29,10 +32,11 @@ The kit version is in the `VERSION` file, the change history is in `CHANGELOG.md
 | `prompts/` | Common review rules, 22 review prompts, work prompts (verify, verify-fix, plan, fix, final) | Passed to subagents |
 | `templates/` | Templates for the files of the `.revref/` working folder and for a custom review | `init`, restoring damaged files |
 | `VERSION`, `CHANGELOG.md` | Kit version and change history | `init`, `resume`, `status` |
-| `hooks/guard.sh` | Guard hook: blocks dangerous git commands and committing secrets | Attached automatically |
+| `hooks/guard.sh` | Guard hook: blocks dangerous git commands and committing secrets | Claude Code — attached automatically; DSH — call it manually (`PLATFORMS.md`) |
+| `hooks/guard.ps1` | The same hook for Windows/PowerShell: runs `guard.sh --check` | DSH on Windows: check before a protected git command |
 | `bin/update.sh` | Checks for and installs a new kit version from its source | Update check and `update` (`PROTOCOLS.md` §11) |
 | `INSTALL` | Where from and with which options the kit was installed; written by the installer | `update` |
-| `hooks/usage.sh` | Status line: saves token limit percentages; `--read` prints them for the orchestrator | Limit check (PIPELINE.md → "Time and token budget"); connected at `init` with the owner's consent |
+| `hooks/usage.sh` | Status line: saves token limit percentages; `--read` prints them for the orchestrator | Claude Code: limit check (PIPELINE.md → "Time and token budget"), connected at `init`; DSH has no status line |
 
 ## Commands
 

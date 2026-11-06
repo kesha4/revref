@@ -14,7 +14,6 @@
 
 skill=${REVREF_UPDATE_SKILL:-$(cd "$(dirname "$0")/.." && pwd)}
 info="$skill/INSTALL"
-data=${REVREF_DATA_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/revref}
 official=https://github.com/kesha4/revref
 
 get() { [ -f "$info" ] && sed -n "s/^$1=//p" "$info" | head -1 | tr -d '\r'; }
@@ -22,6 +21,19 @@ get() { [ -f "$info" ] && sed -n "s/^$1=//p" "$info" | head -1 | tr -d '\r'; }
 lang=$(get lang)
 if [ -z "$lang" ]; then
     lang=en; grep -q 'Аргументы вызова' "$skill/SKILL.md" 2>/dev/null && lang=ru
+fi
+
+# Platform: INSTALL records it since 3.10.0; older installs and manual copies are told apart by the path.
+platform=$(get platform)
+case "$skill" in
+    */.dsh/skills/revref|*/.agents/skills/revref) platform=${platform:-dsh} ;;
+    */.claude/skills/revref|*/skills/revref) platform=${platform:-claude} ;;
+esac
+[ "$platform" = dsh ] || platform=claude
+if [ "$platform" = dsh ]; then
+    data=${REVREF_DATA_DIR:-${DSH_HOME:-$HOME/.dsh}/revref}
+else
+    data=${REVREF_DATA_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/revref}
 fi
 say() { if [ "$lang" = en ]; then printf '%s\n' "$2"; else printf '%s\n' "$1"; fi; }
 die() { say "Ошибка: $1" "Error: $2" >&2; exit 1; }
@@ -37,10 +49,19 @@ esac
 if [ -z "$scope" ] && [ -n "$target" ]; then
     # Installed without INSTALL (older installer or a manual copy): infer from the path.
     scope=global
-    case "$target" in */.claude) [ "$target" != "${CLAUDE_CONFIG_DIR:-$HOME/.claude}" ] && scope=project ;; esac
+    if [ "$platform" = dsh ]; then
+        dsh_home=${DSH_HOME:-$HOME/.dsh}
+        if [ "$target" != "$dsh_home" ] && [ "$target" != "$HOME/.agents" ]; then scope=project; fi
+    else
+        case "$target" in */.claude) [ "$target" != "${CLAUDE_CONFIG_DIR:-$HOME/.claude}" ] && scope=project ;; esac
+    fi
 fi
 if [ "$scope" = project ]; then
-    case "$target" in */.claude) project=${target%/.claude} ;; *) scope=unknown ;; esac
+    if [ "$platform" = dsh ]; then
+        case "$target" in */.dsh) project=${target%/.dsh} ;; *) scope=unknown ;; esac
+    else
+        case "$target" in */.claude) project=${target%/.claude} ;; *) scope=unknown ;; esac
+    fi
 fi
 [ -n "$target" ] || scope=unknown
 installed=$(tr -d '\r\n ' < "$skill/VERSION" 2>/dev/null)
@@ -59,8 +80,8 @@ latest_version() {
 
 where() {
     case "$scope" in
-        project) say "в проекте $project" "in project $project" ;;
-        global) say "глобально ($target)" "globally ($target)" ;;
+        project) [ "$platform" = dsh ] && say "в проекте, DSH: $project" "in project, DSH: $project" || say "в проекте $project" "in project $project" ;;
+        global) [ "$platform" = dsh ] && say "глобально, DSH ($target)" "globally, DSH ($target)" || say "глобально ($target)" "globally ($target)" ;;
         *) say "в $skill" "in $skill" ;;
     esac
 }
@@ -146,14 +167,25 @@ apply() {
     sha=$(git -C "$t/revref" rev-parse HEAD)
     case "$sha" in "$expect"*) ;; *) die "релиз $tag изменился после проверки: $sha вместо $expect" "release $tag changed after the check: $sha instead of $expect" ;; esac
     cd "$t" || exit 1   # the installer moves the current skill folder aside
-    if [ "$scope" = project ]; then
+    if [ "$platform" = dsh ]; then
+        if [ "$scope" = project ]; then
+            sh "$t/revref/install.sh" --dsh --lang "$lang" --project "$project" || die "установщик завершился с ошибкой" "the installer failed"
+        else
+            DSH_HOME="$target" sh "$t/revref/install.sh" --dsh --lang "$lang" || die "установщик завершился с ошибкой" "the installer failed"
+        fi
+    elif [ "$scope" = project ]; then
         sh "$t/revref/install.sh" --lang "$lang" --project "$project" || die "установщик завершился с ошибкой" "the installer failed"
     else
         CLAUDE_CONFIG_DIR="$target" sh "$t/revref/install.sh" --lang "$lang" || die "установщик завершился с ошибкой" "the installer failed"
     fi
     rm -f "$data/update-check" 2>/dev/null
-    say "RevRef обновлён: $installed → ${tag#v} ($(where)). Перезапустите сессию Claude Code и выполните /revref resume, если идёт прогон." \
-        "RevRef updated: $installed → ${tag#v} ($(where)). Restart the Claude Code session and run /revref resume if a run is in progress."
+    if [ "$platform" = dsh ]; then
+        say "RevRef обновлён: $installed → ${tag#v} ($(where)). Перезапустите сеанс DSH и выполните /revref resume, если идёт прогон." \
+            "RevRef updated: $installed → ${tag#v} ($(where)). Restart the DSH session and run /revref resume if a run is in progress."
+    else
+        say "RevRef обновлён: $installed → ${tag#v} ($(where)). Перезапустите сессию Claude Code и выполните /revref resume, если идёт прогон." \
+            "RevRef updated: $installed → ${tag#v} ($(where)). Restart the Claude Code session and run /revref resume if a run is in progress."
+    fi
 }
 
 # The installer replaces the folder this script lives in: run --apply and the interactive mode from a copy.

@@ -129,6 +129,21 @@ g checkout revref/2026-10-13
 payload='{"tool_name":"Bash","tool_input":{"command":"git push --force"},"cwd":"'"$(json_escape "$repo")"'"}'
 if printf '%s' "$payload" | REVREF_GUARD=off sh "$guard" >/dev/null 2>&1; then pass=$((pass + 1)); else fail=$((fail + 1)); echo "FAIL REVREF_GUARD=off не отключил хук"; fi
 
+# --- Режим --check: платформы без хуков (DSH), вызов без JSON на stdin ---
+cli() { sh "$guard" --check "$1" "${2:-$repo}" >/dev/null 2>&1; echo $?; }
+for spec in '2:git push --force' '2:git clean -fd' '0:git status' '0:git commit -m "revref(W2): W2-T01"'; do
+    want=${spec%%:*}; c=${spec#*:}
+    got=$(cli "$c")
+    if [ "$got" = "$want" ]; then pass=$((pass + 1)); else fail=$((fail + 1)); echo "FAIL --check «$c»: ожидалось $want, получено $got"; fi
+done
+got=$(cd "$repo" && sh "$guard" --check 'git push --force' >/dev/null 2>&1; echo $?)
+if [ "$got" = 2 ]; then pass=$((pass + 1)); else fail=$((fail + 1)); echo "FAIL --check без каталога (текущая папка): получено $got"; fi
+REVREF_CHECK_COMMAND='git push --force' sh "$guard" --check-env "$repo" >/dev/null 2>&1
+[ $? -eq 2 ] && pass=$((pass + 1)) || { fail=$((fail + 1)); echo "FAIL --check-env не блокирует force-push"; }
+REVREF_CHECK_COMMAND='git status' sh "$guard" --check-env "$repo" >/dev/null 2>&1
+[ $? -eq 0 ] && pass=$((pass + 1)) || { fail=$((fail + 1)); echo "FAIL --check-env не пропускает git status"; }
+if REVREF_GUARD=off sh "$guard" --check 'git push --force' "$repo" >/dev/null 2>&1; then pass=$((pass + 1)); else fail=$((fail + 1)); echo "FAIL --check не отключился через REVREF_GUARD=off"; fi
+
 # --- worktree: .revref/ не закоммичен, есть только в основном каталоге — хук всё равно активен ---
 repo2="$tmp/project2"
 mkdir -p "$repo2/.revref"

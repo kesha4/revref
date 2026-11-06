@@ -1,12 +1,16 @@
 ﻿<#
 .SYNOPSIS
-    Установка RevRef для Claude Code — Windows PowerShell 5.1 и PowerShell 7+ (Windows, macOS, Linux).
+    Установка RevRef для Claude Code и DSH (DeepSeek Harness) — Windows PowerShell 5.1 и PowerShell 7+ (Windows, macOS, Linux).
 .DESCRIPTION
-    Копирует скилл в <папка конфигурации>/skills/revref и агентов в <папка конфигурации>/agents.
+    Claude Code: копирует скилл в <папка конфигурации>/skills/revref и агентов в <папка конфигурации>/agents.
     Папка конфигурации — $env:CLAUDE_CONFIG_DIR, если задана, иначе ~/.claude; с -Project — <путь>/.claude.
+    DSH: с -Dsh копирует скилл в ${DSH_HOME:-~/.dsh}/skills/revref, с -Project -Dsh — в <путь>/.dsh/skills/revref;
+    агенты не ставятся: DSH сам управляет субагентами, роли лежат в roles/ набора.
     Существующая версия скилла сохраняется рядом с суффиксом .bak-<дата>.
 .PARAMETER Project
-    Установить (или удалить) только в указанном проекте: <путь>/.claude.
+    Установить (или удалить) только в указанном проекте: <путь>/.claude, с -Dsh — <путь>/.dsh.
+.PARAMETER Dsh
+    Установить для DSH (DeepSeek Harness), а не для Claude Code.
 .PARAMETER Lang
     Язык набора: ru (по умолчанию) или en.
 .PARAMETER Uninstall
@@ -14,7 +18,11 @@
 .EXAMPLE
     ./install.ps1
 .EXAMPLE
+    ./install.ps1 -Dsh
+.EXAMPLE
     ./install.ps1 -Project ~/work/my-app
+.EXAMPLE
+    ./install.ps1 -Project ~/work/my-app -Dsh
 .EXAMPLE
     ./install.ps1 -Lang en
 .EXAMPLE
@@ -24,6 +32,7 @@ param(
     [string]$Project,
     [ValidateSet('ru', 'en')]
     [string]$Lang = 'ru',
+    [switch]$Dsh,
     [switch]$Uninstall
 )
 
@@ -36,27 +45,44 @@ if ($Lang -eq 'en') {
 }
 $agentNames = @('revref-reviewer.md', 'revref-verifier.md', 'revref-fixer.md')
 
-if ($Project) {
-    $target = Join-Path (Resolve-Path -LiteralPath $Project).Path '.claude'
-} elseif ($env:CLAUDE_CONFIG_DIR) {
-    $target = $env:CLAUDE_CONFIG_DIR
+$platform = if ($Dsh) { 'dsh' } else { 'claude' }
+
+if ($Dsh) {
+    # DSH читает навыки из <папка конфигурации>/skills и <корень проекта>/.dsh/skills.
+    # Именованных файлов агентов у DSH нет: роли передаются субагентам текстом из roles/.
+    if ($Project) {
+        $target = Join-Path (Resolve-Path -LiteralPath $Project).Path '.dsh'
+    } elseif ($env:DSH_HOME) {
+        $target = $env:DSH_HOME
+    } else {
+        $target = Join-Path $HOME '.dsh'
+    }
+    $agentsDst = $null
 } else {
-    $target = Join-Path $HOME '.claude'
+    if ($Project) {
+        $target = Join-Path (Resolve-Path -LiteralPath $Project).Path '.claude'
+    } elseif ($env:CLAUDE_CONFIG_DIR) {
+        $target = $env:CLAUDE_CONFIG_DIR
+    } else {
+        $target = Join-Path $HOME '.claude'
+    }
+    $agentsDst = Join-Path $target 'agents'
 }
 
 $skillDst  = Join-Path (Join-Path $target 'skills') 'revref'
-$agentsDst = Join-Path $target 'agents'
 
 if ($Uninstall) {
     if (Test-Path -LiteralPath $skillDst) {
         Remove-Item -LiteralPath $skillDst -Recurse -Force
         Write-Host "Удалён скилл: $skillDst"
     }
-    foreach ($name in $agentNames) {
-        $path = Join-Path $agentsDst $name
-        if (Test-Path -LiteralPath $path) {
-            Remove-Item -LiteralPath $path -Force
-            Write-Host "Удалён агент: $path"
+    if ($agentsDst) {
+        foreach ($name in $agentNames) {
+            $path = Join-Path $agentsDst $name
+            if (Test-Path -LiteralPath $path) {
+                Remove-Item -LiteralPath $path -Force
+                Write-Host "Удалён агент: $path"
+            }
         }
     }
     Write-Host 'RevRef удалён. Резервные копии *.bak-* (если есть) не тронуты.'
@@ -70,18 +96,23 @@ if (Test-Path -LiteralPath $skillDst) {
 }
 
 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $skillDst) | Out-Null
-New-Item -ItemType Directory -Force -Path $agentsDst | Out-Null
 
 Copy-Item -LiteralPath $skillSrc -Destination $skillDst -Recurse
 Copy-Item -LiteralPath $changelog -Destination (Join-Path $skillDst 'CHANGELOG.md')
-foreach ($name in $agentNames) {
-    Copy-Item -LiteralPath (Join-Path $agentsSrc $name) -Destination $agentsDst -Force
+if ($agentsDst) {
+    New-Item -ItemType Directory -Force -Path $agentsDst | Out-Null
+    foreach ($name in $agentNames) {
+        Copy-Item -LiteralPath (Join-Path $agentsSrc $name) -Destination $agentsDst -Force
+    }
 }
 
 # Абсолютный путь к сторожевому хуку во frontmatter скилла и агентов (прямые слеши — хук выполняется через sh).
 $skillPath = (Resolve-Path -LiteralPath $skillDst).Path -replace '\\', '/'
 $utf8 = New-Object System.Text.UTF8Encoding $false
-$files = @(Join-Path $skillDst 'SKILL.md') + ($agentNames | ForEach-Object { Join-Path $agentsDst $_ })
+$files = @(Join-Path $skillDst 'SKILL.md')
+if ($agentsDst) {
+    $files += $agentNames | ForEach-Object { Join-Path $agentsDst $_ }
+}
 foreach ($f in $files) {
     $text = [System.IO.File]::ReadAllText($f, $utf8).Replace('__REVREF_SKILL_DIR__', $skillPath)
     [System.IO.File]::WriteAllText($f, $text, $utf8)
@@ -103,11 +134,18 @@ $installInfo = @(
     "source=$origin"
     "lang=$Lang"
     "scope=$scope"
+    "platform=$platform"
     "installed_at=$(Get-Date -Format 'yyyy-MM-dd HH:mm')"
 ) -join "`n"
 [System.IO.File]::WriteAllText((Join-Path $skillDst 'INSTALL'), $installInfo + "`n", $utf8)
 
-Write-Host "Скилл:   $skillDst (язык: $Lang, версия: $((Get-Content -LiteralPath (Join-Path $skillDst 'VERSION') -TotalCount 1)))"
-Write-Host "Агенты:  $agentsDst (revref-reviewer, revref-verifier, revref-fixer)"
-Write-Host "Обновление: /revref update в Claude Code или sh `"$skillPath/bin/update.sh`" в терминале"
-Write-Host 'Перезапустите сессию Claude Code и выполните в проекте: /revref init'
+Write-Host "Скилл:   $skillDst (язык: $Lang, версия: $((Get-Content -LiteralPath (Join-Path $skillDst 'VERSION') -TotalCount 1)), платформа: $platform)"
+if ($Dsh) {
+    Write-Host "Агенты:  не устанавливаются: DSH сам управляет субагентами, роли — в $skillPath/roles/"
+    Write-Host "Обновление: /revref update в DSH или sh `"$skillPath/bin/update.sh`" в терминале"
+    Write-Host 'Откройте новый сеанс DSH и выполните в проекте: /revref init'
+} else {
+    Write-Host "Агенты:  $agentsDst (revref-reviewer, revref-verifier, revref-fixer)"
+    Write-Host "Обновление: /revref update в Claude Code или sh `"$skillPath/bin/update.sh`" в терминале"
+    Write-Host 'Перезапустите сессию Claude Code и выполните в проекте: /revref init'
+}
