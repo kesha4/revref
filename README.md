@@ -1,6 +1,6 @@
 # RevRef v3 — infrastructure for multi-day review and refactoring
 
-[Русский](README.md) · **English**
+[Русский](README.ru.md) · **English**
 
 **RevRef** = **Rev**iew + **Ref**actoring.
 
@@ -546,7 +546,7 @@ The individual review prompts from `skill-en/revref/prompts/reviews/`, together 
 
 ```text
 revref/
-├── README.md, README.en.md   description in Russian and English
+├── README.md, README.ru.md   description in English and Russian
 ├── CHANGELOG.md, CHANGELOG.en.md
 ├── install.sh                installation: macOS, Linux, WSL, Git Bash
 ├── install.ps1               installation: Windows PowerShell 5.1, PowerShell 7+

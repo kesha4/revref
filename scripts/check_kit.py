@@ -16,8 +16,8 @@ import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-TREES = {'ru': (ROOT / 'skill' / 'revref', ROOT / 'agents', ROOT / 'CHANGELOG.md', ROOT / 'README.md'),
-         'en': (ROOT / 'skill-en' / 'revref', ROOT / 'agents-en', ROOT / 'CHANGELOG.en.md', ROOT / 'README.en.md')}
+TREES = {'ru': (ROOT / 'skill' / 'revref', ROOT / 'agents', ROOT / 'CHANGELOG.md', ROOT / 'README.ru.md'),
+         'en': (ROOT / 'skill-en' / 'revref', ROOT / 'agents-en', ROOT / 'CHANGELOG.en.md', ROOT / 'README.md')}
 BUILTIN_IDS = ['QR', 'SEC', 'DEP', 'BUG', 'DATA', 'EDGE', 'RES', 'TEST', 'DX', 'HYG', 'ARC', 'DEC', 'DRY',
                'PERF', 'OBS', 'API', 'I18N', 'RWD', 'A11Y', 'CMT', 'SPEC', 'UDOC']
 AGENTS = ['revref-reviewer.md', 'revref-verifier.md', 'revref-fixer.md']

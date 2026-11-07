@@ -1,6 +1,6 @@
 # RevRef ru → en translation glossary
 
-Used to keep the English version (`skill-en/`, `agents-en/`, `README.en.md`, `CHANGELOG.en.md`) consistent with the Russian source. When a term below appears in the source, use exactly this English form in every file.
+Used to keep the English version (`skill-en/`, `agents-en/`, `README.md`, `CHANGELOG.en.md`) consistent with the Russian source (`skill/`, `agents/`, `README.ru.md`, `CHANGELOG.md`). When a term below appears in the source, use exactly this English form in every file.
 
 ## Rules
 

@@ -1,6 +1,6 @@
 # RevRef v3 — инфраструктура многодневного ревью и рефакторинга
 
-**Русский** · [English](README.en.md)
+**Русский** · [English](README.md)
 
 **RevRef** = **Rev**iew + **Ref**actoring — ревью и рефакторинг.
 
@@ -546,7 +546,7 @@ main ──► revref/<дата> ──/revref finish──► test (стенд 
 
 ```text
 revref/
-├── README.md, README.en.md   описание на русском и английском
+├── README.md, README.ru.md   описание на английском и русском
 ├── CHANGELOG.md, CHANGELOG.en.md
 ├── install.sh                установка: macOS, Linux, WSL, Git Bash
 ├── install.ps1               установка: Windows PowerShell 5.1, PowerShell 7+
