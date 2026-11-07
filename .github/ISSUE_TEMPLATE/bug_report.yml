@@ -1,0 +1,74 @@
+name: Bug report
+description: Report a problem with the kit, installers, guard hook, update script or docs
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. **Do not paste secrets, tokens, personal data or full project diffs.** If a vulnerability is involved, use [SECURITY.md](https://github.com/kesha4/revref/blob/main/SECURITY.md) instead of a public issue.
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Claude Code
+        - DeepSeek Harness (DSH)
+        - Other agent / manual use
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Kit version
+      description: Value from skill/revref/VERSION or the release tag
+      placeholder: "3.11.0"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: OS and shell
+      description: OS, PowerShell/bash version, agent version if relevant
+      placeholder: "Windows 11, PowerShell 7.4 / Git Bash; Claude Code 2.x"
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal, repeatable steps. Include the command and the project type if relevant.
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      placeholder: What should happen?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      description: What happens instead? Include the exact error if any.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, screenshots or a minimal reproducer
+      description: Mask secrets and personal data. Links to gists are fine.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I removed secrets, tokens and personal data from this report.
+          required: true
+        - label: I searched existing issues and discussions for the same problem.
+          required: true
+        - label: I read the relevant documentation (README, PLATFORMS.md, SECURITY.md).
+          required: true

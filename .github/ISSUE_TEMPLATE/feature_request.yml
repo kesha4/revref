@@ -1,0 +1,50 @@
+name: Feature request
+description: Suggest a new review, command, integration or improvement
+title: "[feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the problem first, then the proposal. Small, focused requests are easier to review and ship.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is hard or missing today? Who is affected?
+      placeholder: "When I ..., I have to ... because ..."
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should RevRef do? A command, a review type, a platform behaviour, a template?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What else did you try or consider? Is there a workaround?
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - Prompt / review content
+        - Protocol / roles / orchestration
+        - Platform support (Claude Code, DSH, other)
+        - Installers / update / guard hook
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and discussions for a similar request.
+          required: true
+        - label: I understand that new reviews must fit the wave model and update both RU and EN trees.

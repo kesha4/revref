@@ -1,0 +1,48 @@
+name: Show your run
+description: Share a real RevRef run — what you ran, what it found and what surprised you
+title: "[showcase] "
+labels: ["showcase"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Real runs are the most useful feedback for the project. Share as much as you can without naming clients or pasting secrets. Anonymous projects are welcome.
+  - type: input
+    id: project
+    attributes:
+      label: Project profile
+      description: Stack, size, test count, public/private — anonymous is fine
+      placeholder: "TypeScript monorepo, 10 packages, ~2.5k tests, private"
+    validations:
+      required: true
+  - type: input
+    id: setup
+    attributes:
+      label: Kit version and platform
+      placeholder: "3.11.0, Claude Code / DSH"
+    validations:
+      required: true
+  - type: input
+    id: duration
+    attributes:
+      label: Duration and scope
+      placeholder: "3 days, W0–W9 / W2 only"
+  - type: textarea
+    id: results
+    attributes:
+      label: Results
+      description: Findings, false positives, fixes, decisions, tests before/after, notable wins
+    validations:
+      required: true
+  - type: textarea
+    id: surprising
+    attributes:
+      label: What surprised you — good or bad
+      description: Unexpected findings, limitations, workflow friction, things you would change
+  - type: checkboxes
+    id: permission
+    attributes:
+      label: Permission
+      options:
+        - label: You may quote this report (with project details as I described them) in RevRef docs, articles or release notes.
+          required: false
