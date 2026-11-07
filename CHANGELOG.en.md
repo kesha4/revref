@@ -8,6 +8,12 @@ Kit versions follow [semantic versioning](https://semver.org/). The current vers
 
 A version has a "Migration" section only if something has to be done to a run already in progress when moving to it. The orchestrator reads it on `resume` if the kit version has changed.
 
+## 3.11.0 — 2026-11-07
+
+- **Compatibility with `dsh-client-auto-continue` (Autonomous loop).** The run no longer spins idly: when autonomous work is exhausted and owner answers are needed, the new `/revref wait` command takes a full checkpoint "stopped: waiting for owner answers", shows cards and asks a blocking question (`ask_user_question` in DSH; in Claude Code the loop does not continue the turn, so a blocking question is not mandatory there). The question keeps the turn open, so the autonomous loop does not send another "Continue"; the answers are applied right in the same turn. The "work exhausted" gate and the automatic stop at a step boundary are in `PROTOCOLS.md` §13 and `PIPELINE.md` → "Autonomous loop and stopping for owner answers".
+- **`PLATFORMS.md`** — a section about the autonomous loop: how the plugin continues turns, what consequences that has, the four loop-guard signals (4 identical messages, 4 near-duplicate paragraphs inside one message, 12 short messages within 30 s without tools, 5 identical tool calls), the "never end a turn with an empty status" rule, and the limitation (only the owner can switch the loop off).
+- **Rules and templates.** `ORCHESTRATOR.md` — rule 14 and the main-loop step; `POLICY.md` — the stop condition for owner answers; `SKILL.md` — the `wait` command and a platform note; `templates/STATE.md` — checkpoint types "stopped: waiting for owner answers" and "stopped: by the owner's decision"; `templates/CONFIG.md` — the "Autonomous loop (DSH)" setting. README ru/en — the command, the setting and the DSH loop section.
+
 ## 3.10.0 — 2026-11-07
 
 - **DSH (DeepSeek Harness).** The kit installs and works in DSH: `./install.sh --dsh` / `./install.ps1 -Dsh` copy the skill to `${DSH_HOME:-~/.dsh}/skills/revref` (globally) or `<project>/.dsh/skills/revref` (with `--project` / `-Project`); named agent files are not installed — roles are passed to subagents as text from `roles/`. After installation `/revref` appears in the `/` menu of a new DSH session. The new `PLATFORMS.md` describes the platform differences: tools, asynchronous subagents (`subagent`), manual worktrees, shell, guard check, token limit, sessions, command arguments, project instructions (AGENTS.md).

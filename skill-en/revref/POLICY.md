@@ -2,7 +2,7 @@
 
 ## Principle
 
-The agent works autonomously and does not wait for the owner. Everything the agent decided on its own is recorded, explained and can be reverted. The higher the cost of a mistake, the more isolated the change: a regular commit → a separate commit in the approval queue → a separate branch that is not merged without the owner.
+The agent works autonomously and does not wait for the owner as long as the run has work that does not depend on the owner's answers. Everything the agent decided on its own is recorded, explained and can be reverted. The higher the cost of a mistake, the more isolated the change: a regular commit → a separate commit in the approval queue → a separate branch that is not merged without the owner.
 
 ## Decision classes
 
@@ -97,5 +97,6 @@ On any of the conditions below: stop the run, make a full checkpoint, report in 
 - Signs of compromise or an actively exploited vulnerability have been detected. Report immediately; after that, work only on this problem within W2 until the owner replies.
 - The time budget has run out (the completion procedure is in PIPELINE.md).
 - The weekly token limit threshold has been used (`CONFIG.Token limit`). This is a pause until the window resets; the procedure is in PIPELINE.md → "Time and token budget".
+- The autonomous work is exhausted and further progress requires owner answers. The procedure is `PROTOCOLS.md` §13 (`wait`): a full checkpoint "stopped: waiting for owner answers", cards and a blocking question. In DSH with the autonomous loop this is the only correct stop: without it the loop continues the turn idly. This does not cancel the "don't wait for the owner" rule: while work that does not depend on the answers remains, the run continues.
 
-**Not a reason to stop:** failure of an individual task (it gets the "blocked" status and work continues), questions for the owner (they go into the queue), class C findings (also into the queue).
+**Not a reason to stop:** failure of an individual task (it gets the "blocked" status and work continues), questions for the owner (while independent work remains they go into the queue), class C findings (also into the queue). When no independent work remains, questions become a reason to stop per §13.

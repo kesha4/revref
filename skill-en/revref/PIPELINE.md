@@ -128,6 +128,8 @@ If the gate is not passed:
 
    Whatever you did not ask, determine yourself and mark it in `CONFIG.md` as an "assumption".
 
+   **Autonomous loop (DSH).** This is not a separate question beyond the five: if the platform is DSH, clarify it in the same message with the questions (for example, in the budget question) or infer from repeated "Continue" messages without owner text whether the Autonomous loop mode of the `dsh-client-auto-continue` plugin is on, and record it in the `CONFIG.md` field "Autonomous loop (DSH)". If unsure — write "not used" and clarify on the first automatic "Continue".
+
    **Limit tracking.** If a limit threshold is set, run `sh "<skill directory>/hooks/usage.sh" --read`. If there is no data, the RevRef status line is not connected: offer the owner to connect it (PIPELINE.md → "Time and token budget" → "Connecting") and show the exact `settings.json` change. This is a setting outside the repository, so only after the owner's "yes" in the chat. Without consent or without data, write "Token limit: not tracked (no data)" in `CONFIG.md` and continue.
    **Archived `CONTEXT.md`.** If `.revref/archive/` holds previous runs, take the latest one's `CONTEXT.md` as a draft for steps 4–5: check the map against the current code and verify every command by running it again. Carry over "Owner instructions" with a reference to the archive. Always take the baseline (step 6) anew.
 4. **Project map** → `CONTEXT.md`: purpose, stack, modules and their responsibilities, entry points, external systems, size (files and lines by language); clients, platforms and environments; sources of intended behavior (the specification and its appendices, decisions taken, the real process).
@@ -160,7 +162,7 @@ If the gate is not passed:
    Critical and High found here are fixed through the usual steps; the rest goes into recommendations.
 3. `FINAL_REPORT.md` per `prompts/work/final.md`.
 4. Final checkpoint marked "Run finished".
-5. Message to the owner: where the final report is, how many decisions await approval (by classes C and B), which `revref/pending/*` branches await a decision, what is recommended next. To merge the result into the target branch (`test`), run `/revref finish`. The run itself merges nothing anywhere, and the agent never changes the main branch.
+5. Message to the owner: where the final report is, how many decisions await approval (by classes C and B), which `revref/pending/*` branches await a decision, what is recommended next. To merge the result into the target branch (`test`), run `/revref finish`. The run itself merges nothing anywhere, and the agent never changes the main branch. In DSH with the autonomous loop, the loop continues the turn after the final message: tell the owner in one line that the loop can be switched off, and do not repeat the final status (`PROTOCOLS.md` §13 → "When there are no more questions").
 
 ## Review queue (selective run)
 
@@ -300,3 +302,15 @@ The status line is set in `settings.json` of the Claude Code configuration folde
 ### Settings changes during the run
 
 - If the owner changes `PLAN.md` or `CONFIG.md` during the run, the changes take effect at the boundary of the nearest step. Record this in `JOURNAL.md`.
+
+## Autonomous loop and stopping for owner answers
+
+Applies in DSH with the `dsh-client-auto-continue` plugin in Autonomous loop mode and, in a softer form, on any platform: when the autonomous work is exhausted and owner answers are required, the run stops per `PROTOCOLS.md` §13 (`wait`).
+
+- **The gate.** Stop only when every item of the checklist in `PROTOCOLS.md` §13 → "When to stop" is met. While at least one task, check or merge that does not depend on the owner's answers remains — keep working.
+- **Where to check.** At the boundary of every wave step and every queue item, before starting a new batch of subagents and after a merged task — the same places where the time budget and the token limit are checked.
+- **How.** A full checkpoint "stopped: waiting for owner answers", cards per `PROTOCOLS.md` §10 and a blocking question `ask_user_question` (in DSH; in Claude Code the loop does not continue the turn, so a blocking question is not mandatory) — §13.
+- **The loop guard is a signal, not a stop method.** In DSH the plugin cancels and restarts a turn when the model is spinning: 4 identical messages, 4 near-duplicate paragraphs inside one streamed message, 12 short messages within 30 s with no tools, 5 identical calls of the same tool. If it fires — do not repeat the same action: if work exists, change the approach; if not, `wait`.
+- **Do not end a turn with an empty status.** In the autonomous loop every completed turn is continued automatically; a status without new actions means repetition and a loop-guard trip. A second similar status in a row is already a reason for a checkpoint and `wait`.
+- **One question per pass.** After the answers the loop continues; if other questions remain, ask them in the next `wait`, do not try to ask everything at once.
+- **Terminal stops.** A stop on the time budget (W9), the token limit threshold, "ready to merge", a finished or merged run in DSH with the loop also go through `wait`: cards and a blocking question "wait / switch the loop off / run the owner's command" (`PROTOCOLS.md` §13 → "When there are no more questions"). Otherwise the loop continues the turn idly.

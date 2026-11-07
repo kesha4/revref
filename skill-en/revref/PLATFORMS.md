@@ -85,6 +85,32 @@ sh "<skill dir>/hooks/guard.sh" --check "git push --force"
 - `/revref resume` in a new session is the normal path after an interruption. In DSH the loaded skill text refreshes on the next `/revref` call, but text already inserted into the current turn becomes stale; after `/revref update`, start a new session.
 - Goal auto-continuation in DSH is not durable and is disarmed on session resume — do not rely on it, work with commands.
 
+## DSH autonomous loop
+
+In Autonomous loop mode (`resumeCompletedTurns`) the `dsh-client-auto-continue` plugin sends "Continue" by itself after every completed turn. Successful continuations are unlimited: only the owner (session switch, pause, Stop) or `turn/end:blocked` stops the loop. The skill cannot control the plugin — neither pausing it nor changing its mode is available to it.
+
+Consequence: in the autonomous loop a turn must not end "empty" — with a status, a recap or a repeated card and no new actions. The plugin treats that as a normal completion, sends "Continue", and the turn starts repeating. When the model repeats itself, the plugin's **loop guard** cancels the turn (`agent.cancel`) and restarts it after a cooldown with the text "You may be stuck in a loop. Stop repeating the last action and continue with a different approach." No useful work happens in this cycle.
+
+The loop guard trips on any of these signals (thresholds are configurable in the plugin; defaults shown):
+
+- 4 consecutive identical assistant messages (of any length);
+- 4 near-duplicate paragraphs inside one streamed message;
+- 12 short (under 40 characters) messages within 30 s with no tool call in between;
+- 5 calls of the same tool with identical arguments and identical results.
+
+What RevRef does:
+
+1. **A turn ends in only two ways:** either autonomous work exists — and the turn ends with work actually done; or no work remains without the owner — then `wait` (`PROTOCOLS.md` §13): a full checkpoint "stopped: waiting for owner answers" and a blocking question through `ask_user_question` (in Claude Code the loop does not continue the turn, so a blocking question is not mandatory there — cards and the end of the turn are enough).
+2. **The blocking question keeps the turn open.** Until the owner answers, no `turn/end` happens, so the autonomous loop does not send "Continue". That is the run stopping without touching the plugin.
+3. **Before asking, verify that the work is really exhausted** against the checklist in `PROTOCOLS.md` §13 → "When to stop". While at least one task, check or merge independent of the answers exists — keep working, do not ask.
+4. **The loop guard is a signal, not a working method.** If the text "You may be stuck in a loop…" arrives, do not repeat the same action: run the exhaustion checklist; if work exists — change the approach, if not — move to `wait`.
+5. **Do not repeat cards and statuses.** A second similar status in a row is already a loop-guard risk; instead of repeating, take a checkpoint and `wait` (or perform a concrete new action).
+6. **Any stop with no further work** — the time budget (W9), the token limit threshold, "ready to merge", a finished or merged run — also goes through `wait` in the loop: cards and a blocking question "wait or switch the loop off / run the owner's command". Otherwise the loop continues the turn idly and runs into the loop guard.
+
+A repeated "Continue" message without owner text is a sign that the session is in the autonomous loop; more reliably, record it at `init` in `CONFIG.md` ("Autonomous loop (DSH): yes"). When the loop is off, `wait` acts as an ordinary stop: checkpoint, cards, end of turn.
+
+**Limitation.** The skill cannot stop the autonomous loop itself: only the owner does that (session switch, pause, Stop). If the owner is not answering and wants the continuations to stop, they switch the loop off in the session switch. If the run is finished or merged while the loop is still on, repeated "Continue" messages are pointless: say so in one line and suggest turning the loop off, without repeating the status.
+
 ## Command arguments
 
 - **Claude Code** substitutes `$ARGUMENTS` in `SKILL.md`.
@@ -109,3 +135,4 @@ DSH reads `AGENTS.md`, `CLAUDE.md`, `AGENTS.local.md`, `CLAUDE.local.md` in `$DS
 3. Create a worktree for each fixer yourself and pass it in `cwd`.
 4. `CONFIG.Лимит токенов` in DSH is "not tracked" or the owner's data; rely on the time budget.
 5. Before switching platforms or updating the kit — take a full checkpoint; after the update — start a new session and run `/revref resume`.
+6. If autonomous work is exhausted and owner answers are needed — `wait` (`PROTOCOLS.md` §13), not an empty status: otherwise the autonomous loop continues the turn and runs into the loop guard.

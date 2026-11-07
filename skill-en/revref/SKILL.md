@@ -1,7 +1,7 @@
 ---
 name: revref
 description: A multi-day review and refactoring pipeline for a project of any type and size — review waves in the optimal order, parallel subagents, autonomous decisions with a log and an approval queue for the owner, checkpoints and resume across sessions. Started manually with the /revref command.
-argument-hint: "init | run | resume | checkpoint | status | decisions | review <ID|Wn|all>... [--verify|--fix] [--optimal] [--commits N|SHA,…|A..B] [--since DATE] [--until DATE] | wave <Wn> | ask [N|all|ID…] | finish | abandon | update [vX.Y.Z]"
+argument-hint: "init | run | resume | checkpoint | status | decisions | review <ID|Wn|all>... [--verify|--fix] [--optimal] [--commits N|SHA,…|A..B] [--since DATE] [--until DATE] | wave <Wn> | ask [N|all|ID…] | wait | finish | abandon | update [vX.Y.Z]"
 disable-model-invocation: true
 hooks:
   PreToolUse:
@@ -15,7 +15,7 @@ hooks:
 
 Invocation arguments — the rest of the owner's message after `/revref` (for example `init`, `run`, `review SEC --verify`, `ask 3`). Claude Code substitutes them for `$ARGUMENTS`; DSH substitutes nothing — read the arguments from the message itself.
 
-**Platform.** Before the first command, detect the platform and read its section in `PLATFORMS.md`: Claude Code and DSH differ in tools, subagents and the guard check. The essentials for DSH: hooks from the frontmatter do not run (the guard is started manually, `PLATFORMS.md` → "Guard check"), subagents are asynchronous (`subagent`), and the token limit is not tracked.
+**Platform.** Before the first command, detect the platform and read its section in `PLATFORMS.md`: Claude Code and DSH differ in tools, subagents and the guard check. The essentials for DSH: hooks from the frontmatter do not run (the guard is started manually, `PLATFORMS.md` → "Guard check"), subagents are asynchronous (`subagent`), and the token limit is not tracked. If DSH runs the Autonomous loop of the `dsh-client-auto-continue` plugin, a turn must not end with an empty status: when autonomous work is exhausted and owner answers are needed — `wait` (`PROTOCOLS.md` §13, `PLATFORMS.md` → "DSH autonomous loop").
 
 All kit files live next to this SKILL.md (the skill's base directory). When you pass prompt paths to subagents, give absolute paths from this directory.
 
@@ -27,7 +27,7 @@ The kit version is in the `VERSION` file, the change history is in `CHANGELOG.md
 | `ORCHESTRATOR.md` | The orchestrator role, the main loop, working rules | Always, before any command except `status` |
 | `PIPELINE.md` | Waves W0–W9, wave steps, gates, order, review queue | `init`, `run`, `resume`, `wave`, `review` |
 | `POLICY.md` | Decision classes, labels, autonomy levels, git, stop conditions | `run`, `resume`, `wave`, `decisions`, `review --fix`, `finish` |
-| `PROTOCOLS.md` | Subagent contract, parallelism, checkpoint, resume, owner answers, merging the result | `run`, `resume`, `checkpoint`, `decisions`, `ask`, `wave`, `review`, `finish`, `init`, `abandon` |
+| `PROTOCOLS.md` | Subagent contract, parallelism, checkpoint, resume, owner answers, `wait` stop, merging the result | `run`, `resume`, `checkpoint`, `decisions`, `ask`, `wait`, `wave`, `review`, `finish`, `init`, `abandon` |
 | `roles/` | Subagent roles: reviewer, verifier, fixer | Passed to subagents |
 | `prompts/` | Common review rules, 22 review prompts, work prompts (verify, verify-fix, plan, fix, final) | Passed to subagents |
 | `templates/` | Templates for the files of the `.revref/` working folder and for a custom review | `init`, restoring damaged files |
@@ -53,6 +53,8 @@ The kit version is in the `VERSION` file, the change history is in `CHANGELOG.md
 **`decisions`** — show the whole queue of decisions waiting for the owner (class C first, then B) and process owner answers already entered, per `PROTOCOLS.md`.
 
 **`ask [N | all | ID…]`** — output to the chat the N highest-priority questions and decisions without an owner answer (1 by default; `all` — all of them), or specific entries by ID (`ask D-015`, `ask 3 D-015`), as cards; show linked decisions (up to 3 per group) together that can be answered right in the chat, and record the answers received. Order, format, answer parsing and where answers are recorded — `PROTOCOLS.md` §10. The owner can enter the command while agents are working: in the orchestrator session it is processed immediately, and in a separate session the answers go to `.revref/INBOX.md`.
+
+**`wait`** — stop and wait for owner answers: a full checkpoint "stopped: waiting for owner answers", decision cards and a blocking question (`ask_user_question` in DSH; in Claude Code the loop does not continue the turn, so a blocking question is not mandatory there). In DSH with the Autonomous loop of the `dsh-client-auto-continue` plugin this is the only correct stop of the run: the blocking question keeps the turn open, so the loop does not keep working idly. In other cases it is an ordinary stop: checkpoint, cards, end of turn. Call it only when autonomous work is exhausted; automatically — at a step boundary. When exactly — `PROTOCOLS.md` §13, `PIPELINE.md` → "Autonomous loop and stopping for owner answers".
 
 **`review <list> [mode] [--optimal]`** — a selective run: one or more reviews in queue order in a single launch. Details — `PIPELINE.md` → "Review queue".
 - **List** — IDs separated by spaces or commas (`SEC BUG DRY`), including the project's custom reviews from `.revref/reviews/`. Wave names can be used (`W2` expands to SEC DEP BUG DATA EDGE RES and that wave's custom reviews) and `all` (all applicable reviews in pipeline order). Duplicates are removed; the first occurrence is kept.

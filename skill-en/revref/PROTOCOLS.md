@@ -136,7 +136,7 @@ Performed at the start of any session if `.revref/STATE.md` exists, and also aft
    - Each unfinished finding or task whose files changed after the checkpoint point (by others' commits or by merging the main branch) gets the status "stale" and goes through re-verification before being fixed.
    - Findings already fixed by others' commits get the status "fixed externally <hash>".
 5. **Unfinished task** from the "In progress" section: find its WIP commit, its `revref/task/<ID>` branch or its worktree. Decide whether to continue it or roll it back and start over; record the choice in `JOURNAL.md`.
-6. **Owner answers** — process per §7.
+6. **Owner answers** — process per §7. If the checkpoint type is "stopped: waiting for owner answers", start with the answers in `DECISIONS.md` and `INBOX.md`; if there are still no answers, show the cards and move to `wait` (§13) again.
 7. **Checks.** If the environment differs from the one described in `CONTEXT.md` (a different OS, shell or runtime versions), first re-check the commands and add variants for the new environment. Then run the checks and compare with the baseline. Discrepancies caused only by the change of environment are not regressions: note them in `CONTEXT.md`.
 8. **Entry in `JOURNAL.md`** of type "resume": what has changed since the checkpoint and what you did about it.
 9. **Continuing** — from the first item of "Next actions". Before that, make sure it is still relevant after reconciliation.
@@ -304,7 +304,7 @@ Make the changes for the chosen `.revref/` option in a `revref(finish): …` com
 
 ## §10. Questions for the owner in chat (`ask`)
 
-The command `/revref ask [N | all | ID…]` outputs to the chat the N highest-priority entries waiting for the owner (1 by default; `all` — all of them), or specific entries by ID. The format is such that the owner can answer right in the chat without opening any files. Apart from recording the answers received, the command changes nothing.
+The command `/revref ask [N | all | ID…]` outputs to the chat the N highest-priority entries waiting for the owner (1 by default; `all` — all of them), or specific entries by ID. The format is such that the owner can answer right in the chat without opening any files. Apart from recording the answers received, the command changes nothing. This is a non-blocking command: while autonomous work remains, it is used in the middle of the work. When no work remains without the owner, `wait` (§13) is used.
 
 ### What is shown
 
@@ -479,3 +479,39 @@ Only the owner runs it. It is not executed on its own, from `run` or because of 
      ```
 
      Branches in the remote repository, if they were pushed — `git push origin --delete <branch>`.
+
+## §13. Autonomous loop and stopping for owner answers (`wait`)
+
+The `/revref wait` command and the automatic stop at a step boundary when autonomous work is exhausted and owner answers are required. Why it is needed: in DSH with the `dsh-client-auto-continue` plugin (Autonomous loop mode) every completed turn is continued automatically, so in this situation the turn must not be ended — it has to be kept open with a blocking question (in Claude Code the loop does not continue the turn: cards and the end of the turn are enough there). Platform details and the loop guard — `PLATFORMS.md` → "DSH autonomous loop".
+
+### When to stop (the gate)
+
+Stop for owner answers only when all of the following are true at once:
+
+1. No subagents are running and no merges are unfinished; all subagent notices have been collected and processed.
+2. `PLAN.md` has no task that can be started or continued without an owner answer; in "queue" mode `STATE.md` has no unfinished queue item; the "Next actions" in `STATE.md` cannot be executed without those answers.
+3. Every finding that does not require the owner has a final status; the rest are "waiting for owner" or "blocked" with a reason.
+4. `DECISIONS.md` has no entries the orchestrator can close itself; every unanswered entry requires the owner (🔴 C, 🟠 B depending on the autonomy level, questions).
+5. All safe actions are done: changes are committed, `FINDINGS.md` and `PLAN.md` are updated, checks and reports are done (the checkpoint is step 2).
+6. Further progress is possible only after specific answers (their IDs are listed) or after an owner command (`finish`, `abandon`). The stop is needed in that case too, even if there is nothing to answer.
+
+If at least one item is not met — keep working, do not call `wait`. The "don't wait for the owner" rule (`ORCHESTRATOR.md`, rule 5) applies while autonomous work remains.
+
+### Steps
+
+1. **Safe point.** Wait for subagents (in DSH — their notices), finish the current merge or task, commit the state.
+2. **Full checkpoint** (§5): "Checkpoint type" — "stopped: waiting for owner answers"; the "Waiting for owner" section — D-NNN and what each one blocks; "Next actions" — "process owner answers: …" as the first item. In `JOURNAL.md` — an entry of type "stop" with the reason.
+3. **Cards in the chat** per §10 (format, priority, groups) — no more than one screen; a counter of the remaining ones in the footer.
+4. **Blocking question.** In DSH — `ask_user_question` (mandatory: it keeps the turn open and stops the autonomous loop): up to 3 questions per call, one per group of related decisions. In Claude Code a blocking question is not mandatory — the loop does not continue the turn there, so cards and the end of the turn are enough (step 8); `AskUserQuestion` is appropriate when the owner is present. The question is the essence and the consequences; the options: the recommended one first marked "recommended", then the alternatives, then "Skip" and "Stop the run". Do not duplicate the whole card text in the question — an ID and one line of essence. If the question tool is unavailable — cards and the end of the turn; in DSH warn the owner that the autonomous loop will continue the turn and has to be switched off with the switch. While the owner has not answered, the turn stays open — this is the normal state of a stopped run; it can be closed with Stop in DSH.
+5. **Answers.** Record the received answers in `DECISIONS.md` per §7 with the mark "answer given in chat <date time>" and apply them at the nearest safe point. If work is unblocked — continue `run` in the same turn; if new questions appear — the next `wait` follows the same protocol.
+6. **Skip.** "Skip" does not close the entry: the status stays "waiting for confirmation" with the mark "skipped by the owner". Ask no more than once per turn; if every question was skipped — ask one blocking question "No answers: leave the questions waiting or stop the run?" and act per steps 5–7. End the turn with one line "Waiting for answers: D-…" only when the loop is off. Do not repeat the same cards in new turns without new data.
+7. **Stop the run.** If the owner chose "Stop the run" — that is a stop command: a full checkpoint "stopped: by the owner's decision", list what remains, and end the turn. Continue with `/revref resume`.
+8. **The loop is off** (Claude Code, DSH without the plugin): a blocking question is not needed — steps 1–3, then end the turn; the owner answers in the chat, `DECISIONS.md` or `INBOX.md`, and the continuation is `/revref resume` or the next turn.
+
+### When there are no more questions
+
+If no unanswered questions remain and there is no work — the run is finished: perform W9 (`PIPELINE.md`) and write `FINAL_REPORT.md`. In DSH with the autonomous loop, do not end the final turn with an empty status: ask a blocking question "The run is finished, there is no work: finish and switch the loop off, or open `/revref finish`?" and act per steps 5–7. Do not repeat the final status: every new "Continue" without work leads to a loop-guard trip.
+
+### Relation to §10 and §7
+
+`ask` (§10) — non-blocking cards in the middle of the work: use it while autonomous work remains. `wait` — only when there is no work: it does what `ask` does but keeps the turn open. Answers are processed per §7 in both cases. A blocked turn does not see `DECISIONS.md` edits or `INBOX.md` entries made in another session: it waits for an answer in its own question. If the owner answers via a file — stop the turn (DSH Stop) and continue with `/revref resume`.

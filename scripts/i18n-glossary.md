@@ -88,7 +88,7 @@ Review prompt files start with: `# <ID> — <English name>` then `Finding ID pre
 **CONFIG.md** (the guard hook greps `- Main branch:`):
 `- Purpose and users:` · `- Stage: prototype / MVP / production / legacy` · `- Load and data volume:` · `- Critical parts (money, personal data, access):` · `- Do not touch:` · `- Special focus:` · `- Autonomy level: balanced` · `- Fix threshold: Medium` · `- Reviews: all applicable` · `- Custom reviews: none` · `- Scope: whole repository` · `- Parallelism: up to 4 subagents` · `- Time budget: unlimited` · `- Token limit: 95% of the weekly limit` · `- Run branch: revref/YYYY-MM-DD` · `- Main branch: main` · `- Target branch (finish): test` · `- Push: forbidden` · `- Merge method (finish): ask` · `- .revref/ on merge (finish): ask` · `- Keep .revref/ in git: yes` · `- Report language: English`
 
-**STATE.md**: `- Updated:` · `- Kit version:` · `- Checkpoint type: light | full | stopped: token limit (reset YYYY-MM-DD HH:MM) | run finished | ready to merge | run merged into <branch> <hash> | PR created <link>` · `- Run branch:` · `- Run base commit:` · `- HEAD before checkpoint:` · `- Mode: pipeline | queue` · `- Current wave and step:` · `- Paused pipeline:`; sections `## Queue`, `## Progress by wave`, `## Counters`, `## In progress`, `## Next actions`, `## Waiting for owner`, `## Checks`, `## Uncommitted and WIP`, `## Notes for the next session`.
+**STATE.md**: `- Updated:` · `- Kit version:` · `- Checkpoint type: light | full | stopped: token limit (reset YYYY-MM-DD HH:MM) | stopped: waiting for owner answers | stopped: by the owner's decision | run finished | ready to merge | run merged into <branch> <hash> | PR created <link>` · `- Run branch:` · `- Run base commit:` · `- HEAD before checkpoint:` · `- Mode: pipeline | queue` · `- Current wave and step:` · `- Paused pipeline:`; sections `## Queue`, `## Progress by wave`, `## Counters`, `## In progress`, `## Next actions`, `## Waiting for owner`, `## Checks`, `## Uncommitted and WIP`, `## Notes for the next session`.
 
 **CONTEXT.md** sections: Project, Module map, Commands, Baseline, Project conventions, Quirks and pitfalls, Domain glossary, **Owner instructions** (указания владельца).
 
@@ -122,6 +122,12 @@ Review prompt files start with: `# <ID> — <English name>` then `Finding ID pre
 | «Подключение» (статусной строки) | "Connecting" |
 | «Лимит токенов: 95% недельного лимита» | "Token limit: 95% of the weekly limit" |
 | «остановлен: лимит токенов» | "stopped: token limit" |
+| «остановлен: ждёт ответов владельца» | "stopped: waiting for owner answers" |
+| «остановлен: по решению владельца» | "stopped: by the owner's decision" |
+| «Автономный цикл (DSH)» | "Autonomous loop (DSH)" |
+| «Автономный цикл и остановка для получения ответов владельца (`wait`)» | "Autonomous loop and stopping for owner answers (`wait`)" |
+| «Автономный цикл DSH» | "DSH autonomous loop" |
+| защита от циклов (loop guard) | loop guard |
 | статусная строка | status line |
 | «Обновление набора» | "Kit update" |
 | «Безопасная точка» | "Safe point" |

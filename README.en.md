@@ -135,6 +135,7 @@ powershell -ExecutionPolicy Bypass -File install.ps1 -Lang en
 | `/revref status` | Short summary from the files; changes nothing |
 | `/revref decisions` | Show the whole approval queue and process your answers from the file |
 | `/revref ask [N\|all\|ID…]` | Show in the chat the highest-priority unanswered questions (1 by default) or specific ones by ID and accept the answers right away; linked decisions as a group; can be entered while agents are working |
+| `/revref wait` | Stop and wait for owner answers: a full checkpoint, decision cards and a blocking question. In DSH with the Autonomous loop this is the correct stop of the run (only the owner switches the loop itself off); it runs automatically when autonomous work is exhausted |
 | `/revref review <list> [--verify\|--fix] [--optimal]` | One or more selected reviews in a single launch, in queue order (parameters below) |
 | `/revref wave <Wn>` | Run a single wave |
 | `/revref finish` | Merge the result into the `test` branch (test stand): decision review, trial merge, checks, stand checklist; merge and push — each after your "yes" |
@@ -170,10 +171,11 @@ Reviewers look at the diff of these commits and what it affects; each finding is
 | Command | Argument | What it does |
 |---|---|---|
 | `/revref ask [N\|all\|ID…]` | a number, `all` or decision IDs (`D-015`); can be mixed; `1` by default | How many of the highest-priority questions to show, or which ones |
+| `/revref wait` | *(no arguments)* | Stop for owner answers: checkpoint "stopped: waiting for owner answers", cards and a blocking question; only when autonomous work is exhausted (`PROTOCOLS.md` §13) |
 | `/revref wave <Wn>` | `W0`…`W9` | Run a single pipeline wave, checking its entry conditions |
 | `/revref` | *(no arguments)* | If a run exists — a short status and an offer to `resume`; if not — command help |
 
-`init`, `run`, `resume`, `checkpoint`, `status`, `decisions` and `finish` take no parameters. Their behavior is configured in `.revref/CONFIG.md`.
+`init`, `run`, `resume`, `checkpoint`, `status`, `decisions`, `wait` and `finish` take no parameters. Their behavior is configured in `.revref/CONFIG.md`.
 
 ### Run settings in `CONFIG.md`
 
@@ -188,6 +190,7 @@ Reviewers look at the diff of these commits and what it affects; each finding is
 | Parallelism | up to 4 subagents | a number |
 | Time budget | unlimited | a duration or a date |
 | Token limit | 95% of the weekly limit | N% of the weekly limit · do not track ([Token limit](#token-limit)) |
+| Autonomous loop (DSH) | not used | not used · yes · no ([DSH autonomous loop](#dsh-autonomous-loop)) |
 | Run branch | `revref/YYYY-MM-DD` | branch name |
 | Main branch | `main` | branch name (the agent does not change it) |
 | Target branch (`finish`) | `test` | branch name |
@@ -487,6 +490,17 @@ The run can stop on its own before it runs into the subscription limit: by defau
 - **DSH** has no Claude Code status line and does not give the agent subscription limit data, so `hooks/usage.sh` does not work there. If a threshold is set, the agent writes "not tracked" and works by the time budget; the owner tracks the percentage themselves (`skill-en/revref/PLATFORMS.md` → "Token limit").
 - The script is covered by tests: `sh scripts/test_usage.sh`.
 
+### DSH autonomous loop
+
+In **Autonomous loop** mode the `dsh-client-auto-continue` plugin sends "Continue" by itself after every completed turn, until the owner stops it with the session switch, a pause or Stop. The skill cannot control the plugin, so RevRef adapts to that behavior:
+
+- **Stop with a question, not with an empty status.** When autonomous work is exhausted and owner answers are needed, the agent takes a full checkpoint "stopped: waiting for owner answers" and asks a blocking question (`ask_user_question` in DSH). The turn stays open — no `turn/end` happens, so the loop does not keep working idly. The answers are applied right in the same turn.
+- **While work remains, do not ask.** The gate and checklist are in `PROTOCOLS.md` §13 and `PIPELINE.md` → "Autonomous loop and stopping for owner answers". The "don't wait for the owner" rule still applies while the run can advance on its own.
+- **The loop guard must not fire.** The plugin cancels and restarts a spinning turn (4 identical messages, 4 near-duplicate paragraphs, 12 short messages within 30 s without tools, 5 identical tool calls). To avoid this, the agent does not repeat statuses and cards: instead of repeating — a checkpoint and `wait`. If the guard does fire — that is a signal to change the approach or move to `wait`.
+- **Limitation.** The skill cannot switch the autonomous loop off completely — the owner does that in the session switch. But any stop with no further work (time budget, token limit, "ready to merge", a finished or merged run) is also closed by the agent with a question "wait or switch the loop off / run the owner's command", not with an empty turn.
+
+The `/revref wait` command does the same manually. The "Autonomous loop (DSH)" setting in `CONFIG.md` records whether the session's loop is on, so the agent does not have to guess.
+
 ## Without Claude Code or without subagents
 
 The kit also works in other agents (Cursor, Codex, Aider, etc.):
@@ -554,7 +568,7 @@ revref/
     ├── ORCHESTRATOR.md         orchestrator role and main loop
     ├── PIPELINE.md             waves, steps, gates, overlaps, budget
     ├── POLICY.md               decision classes, labels, autonomy levels, git, prohibitions, stopping
-    ├── PROTOCOLS.md            subagents, sharding, parallelism, checkpoint, resume, owner answers, merge (finish), questions in chat (ask)
+    ├── PROTOCOLS.md            subagents, sharding, parallelism, checkpoint, resume, owner answers, the `wait` stop for owner answers, merge (finish), questions in chat (ask)
     ├── roles/                  reviewer, verifier, fixer
     ├── prompts/
     │   ├── common-rules.md     general review rules
