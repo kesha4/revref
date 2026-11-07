@@ -1,90 +1,90 @@
-# RevRef v3 — инфраструктура многодневного ревью и рефакторинга
+# RevRef v3 — infrastructure for multi-day review and refactoring
 
-**Русский** · [English](README.en.md)
+[Русский](README.md) · **English**
 
-**RevRef** = **Rev**iew + **Ref**actoring — ревью и рефакторинг.
+**RevRef** = **Rev**iew + **Ref**actoring.
 
-RevRef v3 — конвейер, который проводит все виды ревью и рефакторинга проекта по очереди в оптимальном порядке, в течение нескольких суток, с параллельными субагентами и автономными решениями. Каждое решение записывается, решения с серьёзными последствиями ставятся в очередь на подтверждение владельцем. Состояние можно сохранить и продолжить работу в любой другой сессии, даже после чужих коммитов.
+RevRef v3 is a pipeline that runs every kind of review and refactoring of a project one after another in the optimal order, over several days, with parallel subagents and autonomous decisions. Every decision is recorded; decisions with serious consequences are placed in the approval queue for the owner. The state can be saved and the work resumed in any other session, even after other people's commits.
 
-## Как это устроено
+## How it works
 
 ```text
-W0 Подготовка ─ ветка, .revref/, карта проекта, базовая линия проверок
-W1 Разведка ── быстрое ревью QR → какие ревью нужны, распределение находок
-W2 Безопасность и корректность ── SEC DEP BUG DATA EDGE RES
-W3 Фундамент ── TEST DX (страховочная сеть перед рефакторингом)
-W4 Очистка ──── HYG
-W5 Структура ── ARC → DEC → DRY
-W6 Эксплуатация ─ PERF OBS API I18N
-W7 Интерфейс ── RWD A11Y (может идти параллельно с W4–W6)
-W8 Документация ─ CMT SPEC UDOC
-W9 Финал ────── QR-дельта, сравнение с базовой линией, итоговый отчёт
+W0 Preparation ─ branch, .revref/, project map, check baseline
+W1 Reconnaissance ── quick review QR → which reviews are needed, distribution of findings
+W2 Security and correctness ── SEC DEP BUG DATA EDGE RES
+W3 Foundation ── TEST DX (safety net before refactoring)
+W4 Cleanup ──── HYG
+W5 Structure ── ARC → DEC → DRY
+W6 Operations ─ PERF OBS API I18N
+W7 Interface ── RWD A11Y (can run in parallel with W4–W6)
+W8 Documentation ─ CMT SPEC UDOC
+W9 Final ────── QR delta, comparison with the baseline, final report
 
-Каждая волна:
-  ревью (параллельно) → верификация (свежие агенты) → план (группы без пересечения файлов)
-  → исправления (параллельно в изолированных worktree) → проверка каждого исправления независимым верификатором
-  → ворота (проверки) → веха и чекпоинт
+Each wave:
+  reviews (parallel) → verification (fresh agents) → plan (groups with no file overlap)
+  → fixes (parallel in isolated worktrees) → every fix checked by an independent verifier
+  → gate (checks) → milestone and checkpoint
 ```
 
-**Роли.**
-- **Оркестратор** — основная сессия: планирует, сливает, принимает решения, ведёт файлы состояния.
-- **Ревьюер, верификатор, исполнитель** — субагенты. Ревьюер и верификатор не меняют код. Исполнитель работает в отдельном worktree и ветке задачи, а вливает его работу только оркестратор после проверок. Каждой роли может одновременно работать несколько экземпляров на непересекающихся модулях или файлах.
-- **Независимая проверка.** Находки и каждое готовое исправление проверяет верификатор, который не был автором ревью или правки. По исправлению он отвечает на три вопроса: верна ли предпосылка (ТЗ, принятые решения, реальный процесс), что правка запрещает или меняет для честного пользователя (такие случаи — только решением владельца, метка `LEGIT`), и риск регрессии (другие клиенты, старая версия клиента во время обновления, минимальные платформы, сервер и контейнеры — тестами и разбором кода).
+**Roles.**
+- **Orchestrator** — the main session: plans, merges, makes decisions, maintains the state files.
+- **Reviewer, verifier, fixer** — subagents. The reviewer and verifier do not change code. The fixer works in a separate worktree and task branch, and only the orchestrator merges its work, after checks. Each role can run in several instances at once on non-overlapping modules or files.
+- **Independent check.** Findings and every finished fix are checked by a verifier who was not the author of the review or the change. For a fix it answers three questions: is the premise right (specification, decisions taken, real process), what the change forbids or changes for an honest user (such cases only by an owner decision, label `LEGIT`), and regression risk (other clients, an old client version during an update, minimum platforms, server and containers — with tests and code reading).
 
-**Решения.**
-- 🟢 **A** — технические: делаются сразу.
-- 🟠 **B** — меняют поведение, UX, контракты или спорны: делаются отдельным коммитом и встают в очередь.
-- 🔴 **C** — деньги, данные, доступы, юридические вопросы: не вливаются без владельца, готовятся в ветке `revref/pending/D-NNN`.
+**Decisions.**
+- 🟢 **A** — technical: made immediately.
+- 🟠 **B** — change behavior, UX or contracts, or are debatable: made in a separate commit and placed in the queue.
+- 🔴 **C** — money, data, access, legal matters: not merged without the owner; prepared in the branch `revref/pending/D-NNN`.
 
-Полная таблица меток — в `skill/revref/POLICY.md`. Расшифровка ID ревью — в разделе «Ревью: полный список», ветки и коммиты — в разделе «Работа с ветками git».
+The full table of labels is in `skill-en/revref/POLICY.md`. Review IDs are explained in the section "Reviews: full list", branches and commits in the section "Working with git branches".
 
-## Ревью: полный список
+## Reviews: full list
 
-22 ревью. ID используется в командах (`/revref review SEC`), в именах отчётов (`.revref/reports/SEC.md`) и как префикс находок (`SEC-01`). Промпты — в `skill/revref/prompts/reviews/<ID>.md`.
+22 reviews. The ID is used in commands (`/revref review SEC`), in report names (`.revref/reports/SEC.md`) and as the finding prefix (`SEC-01`). The prompts are in `skill-en/revref/prompts/reviews/<ID>.md`.
 
-| ID | Ревью | Волна | Что проверяет |
+| ID | Review | Wave | What it checks |
 |---|---|---|---|
-| `QR` | Быстрое комплексное ревью | W1, W9 | Общая картина по 9 блокам и применимость остальных ревью; в W9 — дельта и регрессии рефакторинга |
-| `SEC` | Безопасность | W2 | Модель угроз, аутентификация и авторизация, инъекции, веб-уязвимости, криптография, секреты |
-| `DEP` | Зависимости и цепочка поставок | W2 | Уязвимые, устаревшие, заброшенные и лишние пакеты, lock-файлы, лицензии |
-| `BUG` | Баги и логические ошибки | W2 | Существующие дефекты: условия, null, асинхронность, утечки ресурсов, даты, арифметика |
-| `DATA` | Данные, БД и миграции | W2 | Схема и ограничения целостности, индексы, транзакции, безопасность миграций, бэкапы |
-| `EDGE` | Граничные случаи | W2 | Пустые и предельные значения, Unicode, повторы и параллельные запросы, сбои внешних систем, валидация на границах |
-| `RES` | Устойчивость к сбоям | W2 | Обработка ошибок, таймауты, ретраи, каскадные отказы, graceful shutdown, идемпотентность |
-| `TEST` | Тесты | W3 | Покрытие критических путей, качество и стабильность тестов, предложения новых тестов |
-| `DX` | Сборка, CI/CD и опыт разработчика | W3 | Онбординг, воспроизводимость сборки, линтеры, CI, конфигурация и секреты, деплой и откат |
-| `HYG` | Гигиена кода | W4 | Мёртвый код, неиспользуемые импорты и зависимости, отладочный вывод, устаревшие TODO, вечные флаги |
-| `ARC` | Архитектура | W5 | Карта модулей, границы и связанность, слои и циклы, изоляция внешних систем, единообразие подходов |
-| `DEC` | Декомпозиция | W5 | Перегруженные файлы и функции, вложенность, «божественные» объекты, план безопасного разбиения |
-| `DRY` | DRY | W5 | Дублирование логики, типов и правил между слоями, разошедшиеся копии — без объединения случайного сходства |
-| `PERF` | Производительность | W6 | Сложность на горячих путях, N+1 и индексы, I/O, память, фронтенд-бандл — с методом измерения |
-| `OBS` | Наблюдаемость | W6 | Логи, трассировка, метрики, health-проверки, алерты, журнал аудита |
-| `API` | Контракты API | W6 | Согласованность, семантика, обратная совместимость, схемы контрактов, лимиты |
-| `I18N` | Интернационализация | W6 | Захардкоженные строки, плюрализация, форматы дат и валют, полнота переводов, RTL |
-| `RWD` | Адаптивность интерфейса | W7 | Вёрстка от 320 до 2560+ px, сенсорные устройства, масштаб 200%, длинный контент |
-| `A11Y` | Доступность | W7 | WCAG 2.2 AA: клавиатура, семантика, формы, контраст, скринридеры |
-| `CMT` | Комментарии в коде | W8 | Устаревшие и противоречащие коду комментарии, лишние и недостающие, описание публичного API |
-| `SPEC` | Соответствие ТЗ и техдокументации | W8 | Матрица трассируемости требований, расхождения кода и документов, работоспособность инструкций README |
-| `UDOC` | Пользовательская документация | W8 | Полнота, актуальность, понятность, таблицы и иллюстрации, проверка на типовых задачах пользователя |
+| `QR` | Quick comprehensive review | W1, W9 | The overall picture across 9 blocks and the applicability of the other reviews; in W9 — the delta and refactoring regressions |
+| `SEC` | Security | W2 | Threat model, authentication and authorization, injections, web vulnerabilities, cryptography, secrets |
+| `DEP` | Dependencies and supply chain | W2 | Vulnerable, outdated, abandoned and unnecessary packages, lock files, licenses |
+| `BUG` | Bugs and logic errors | W2 | Existing defects: conditions, null, asynchrony, resource leaks, dates, arithmetic |
+| `DATA` | Data, databases and migrations | W2 | Schema and integrity constraints, indexes, transactions, migration safety, backups |
+| `EDGE` | Edge cases | W2 | Empty and boundary values, Unicode, retries and concurrent requests, external system failures, validation at boundaries |
+| `RES` | Resilience | W2 | Error handling, timeouts, retries, cascading failures, graceful shutdown, idempotency |
+| `TEST` | Tests | W3 | Coverage of critical paths, test quality and stability, proposals for new tests |
+| `DX` | Build, CI/CD and developer experience | W3 | Onboarding, build reproducibility, linters, CI, configuration and secrets, deployment and rollback |
+| `HYG` | Code hygiene | W4 | Dead code, unused imports and dependencies, debug output, stale TODOs, permanent flags |
+| `ARC` | Architecture | W5 | Module map, boundaries and coupling, layers and cycles, isolation of external systems, consistency of approaches |
+| `DEC` | Decomposition | W5 | Overloaded files and functions, nesting, "god" objects, a plan for safe splitting |
+| `DRY` | DRY | W5 | Duplicated logic, types and rules across layers, diverged copies — without merging coincidental similarity |
+| `PERF` | Performance | W6 | Complexity on hot paths, N+1 and indexes, I/O, memory, frontend bundle — with a measurement method |
+| `OBS` | Observability | W6 | Logs, tracing, metrics, health checks, alerts, audit log |
+| `API` | API contracts | W6 | Consistency, semantics, backward compatibility, contract schemas, limits |
+| `I18N` | Internationalization | W6 | Hardcoded strings, pluralization, date and currency formats, translation completeness, RTL |
+| `RWD` | Responsive UI | W7 | Layout from 320 to 2560+ px, touch devices, 200% zoom, long content |
+| `A11Y` | Accessibility (a11y) | W7 | WCAG 2.2 AA: keyboard, semantics, forms, contrast, screen readers |
+| `CMT` | Code comments | W8 | Stale comments and comments contradicting the code, unnecessary and missing ones, public API descriptions |
+| `SPEC` | Compliance with the specification and technical docs | W8 | Requirements traceability matrix, discrepancies between code and documents, whether README instructions work |
+| `UDOC` | User documentation | W8 | Completeness, currency, clarity, tables and illustrations, testing against typical user tasks |
 
-Имена волн можно использовать в командах как группы: `/revref review W2` = SEC DEP BUG DATA EDGE RES.
+Wave names can be used in commands as groups: `/revref review W2` = SEC DEP BUG DATA EDGE RES.
 
-## Свои ревью
+## Custom reviews
 
-Кроме 22 встроенных ревью, у проекта могут быть свои: специфика предметной области, требования регулятора, внутренние стандарты.
+Besides the 22 built-in reviews, a project can have its own: domain specifics, regulatory requirements, internal standards.
 
-| Файл в проекте | Что это |
+| File in the project | What it is |
 |---|---|
-| `.revref/reviews/<ID>.md` | Новое ревью. Шаблон — `skill/revref/templates/custom-review.md` |
-| `.revref/reviews/<ID>.extra.md` | Дополнение к встроенному ревью, без его замены. Например, `SEC.extra.md` со спецификой VPN-протокола |
+| `.revref/reviews/<ID>.md` | A new review. Template — `skill-en/revref/templates/custom-review.md` |
+| `.revref/reviews/<ID>.extra.md` | An addendum to a built-in review, without replacing it. For example, `SEC.extra.md` with VPN protocol specifics |
 
-- **ID** — 2–8 заглавных латинских букв или цифр, не совпадающих со встроенными. Он же — префикс находок.
-- **Волна** задаётся в `CONFIG.md`: `- Свои ревью: VPN → W2, GDPR → W8`. Если не задана, агент назначит волну по теме ревью и объяснит выбор в `PLAN.md`.
-- **Участие в работе.** Свои ревью проходят те же шаги, верификацию и политику решений, входят в `all` и имена волн и запускаются отдельно: `/revref review VPN --fix`.
+- **ID** — 2–8 uppercase Latin letters or digits, not matching a built-in one. It is also the finding prefix.
+- **Wave** is set in `CONFIG.md`: `- Custom reviews: VPN → W2, GDPR → W8`. If it is not set, the agent assigns a wave based on the review's topic and explains the choice in `PLAN.md`.
+- **Participation in the work.** Custom reviews go through the same steps, verification and decision policy, are included in `all` and in wave names, and can be run on their own: `/revref review VPN --fix`.
 
-## Установка
+## Installation
 
-Набор работает на Windows, macOS и Linux, в Claude Code и в DSH (DeepSeek Harness). Сами промпты и протоколы от платформы не зависят; для установки есть два равноценных скрипта. Различия платформ и их влияние на прогон — в `skill/revref/PLATFORMS.md`.
+The kit works on Windows, macOS and Linux, in Claude Code and in DSH (DeepSeek Harness). The prompts and protocols themselves are platform-independent, and there are two equivalent installation scripts. Platform differences and their effect on a run are described in `skill-en/revref/PLATFORMS.md`. The English version is installed with the `--lang en` / `-Lang en` flag; without the flag, the Russian version is installed (the default).
 
 ```bash
 git clone https://github.com/kesha4/revref.git && cd revref
@@ -93,494 +93,494 @@ git clone https://github.com/kesha4/revref.git && cd revref
 **macOS, Linux, WSL, Git Bash:**
 
 ```bash
-./install.sh
+./install.sh --lang en
 ```
 
-**Windows PowerShell 5.1 или PowerShell 7+ на любой ОС:**
+**Windows PowerShell 5.1 or PowerShell 7+ on any OS:**
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File install.ps1
+powershell -ExecutionPolicy Bypass -File install.ps1 -Lang en
 ```
 
-| Действие | `install.sh` | `install.ps1` |
+| Action | `install.sh` | `install.ps1` |
 |---|---|---|
-| Глобально, для всех проектов (Claude Code) | `./install.sh` | `./install.ps1` |
-| Только в один проект (`<проект>/.claude`) | `./install.sh --project <путь>` | `./install.ps1 -Project <путь>` |
-| Глобально для DSH (`${DSH_HOME:-~/.dsh}/skills`) | `./install.sh --dsh` | `./install.ps1 -Dsh` |
-| Только в один проект для DSH (`<проект>/.dsh/skills`) | `./install.sh --dsh --project <путь>` | `./install.ps1 -Dsh -Project <путь>` |
-| Удалить | `./install.sh --uninstall` (с `--dsh` для DSH) | `./install.ps1 -Uninstall` (с `-Dsh` для DSH) |
-| Английская версия набора | `./install.sh --lang en` | `./install.ps1 -Lang en` |
+| Globally, for all projects (Claude Code) | `./install.sh --lang en` | `./install.ps1 -Lang en` |
+| Into a single project only (`<project>/.claude`) | `./install.sh --lang en --project <path>` | `./install.ps1 -Lang en -Project <path>` |
+| Globally for DSH (`${DSH_HOME:-~/.dsh}/skills`) | `./install.sh --lang en --dsh` | `./install.ps1 -Lang en -Dsh` |
+| Into a single project for DSH (`<project>/.dsh/skills`) | `./install.sh --lang en --dsh --project <path>` | `./install.ps1 -Lang en -Dsh -Project <path>` |
+| Uninstall | `./install.sh --uninstall` (add `--dsh` for DSH) | `./install.ps1 -Uninstall` (add `-Dsh` for DSH) |
+| Russian version of the kit (default) | `./install.sh` | `./install.ps1` |
 
-- **Куда ставится.** Claude Code: скилл (со сторожевым хуком) копируется в `<папка конфигурации>/skills/revref`, агенты — в `<папка конфигурации>/agents/`. Установщик прописывает абсолютный путь к хуку в `SKILL.md` и в файлах агентов. Папка конфигурации — `~/.claude` или значение переменной `CLAUDE_CONFIG_DIR`, если она задана.
-- **DSH.** Скилл копируется в `${DSH_HOME:-~/.dsh}/skills/revref` (глобально) или `<проект>/.dsh/skills/revref`; именованные файлы агентов не ставятся — DSH сам управляет субагентами, а роли лежат в `roles/`. После установки откройте новый сеанс DSH: команда `/revref` появится в меню `/` (клиент кэширует каталог навыков на сессию). Навык помечен `disable-model-invocation`, поэтому в каталоге модели его нет — запускает только владелец.
-- **Повторная установка.** Если скилл уже установлен, предыдущая версия сохраняется рядом с суффиксом `.bak-<дата>`.
-- **После установки** перезапустите сессию Claude Code и выполните в проекте `/revref init`.
-- **Без скриптов.** Можно скопировать вручную: папку `skill/revref` → `~/.claude/skills/revref` (или `~/.dsh/skills/revref`), файлы `agents/*.md` → `~/.claude/agents/` (только Claude Code), `CHANGELOG.md` → в папку скилла. Затем замените `__REVREF_SKILL_DIR__` в `SKILL.md` и файлах агентов на путь к папке скилла (с прямыми слешами). Без этой замены сторожевой хук будет неактивен.
+- **Where it goes.** Claude Code: the skill (with the guard hook) is copied to `<config folder>/skills/revref`, the agents to `<config folder>/agents/`. The installer writes the absolute path to the hook into `SKILL.md` and the agent files. The config folder is `~/.claude`, or the value of the `CLAUDE_CONFIG_DIR` variable if it is set.
+- **DSH.** The skill is copied to `${DSH_HOME:-~/.dsh}/skills/revref` (globally) or `<project>/.dsh/skills/revref`; named agent files are not installed — DSH manages subagents itself, and the roles live in `roles/`. After installation, open a new DSH session: the `/revref` command appears in the `/` menu (the client caches the skill catalog per session). The skill is marked `disable-model-invocation`, so it is absent from the model catalog — only the owner starts it.
+- **Reinstalling.** If the skill is already installed, the previous version is kept next to it with the suffix `.bak-<date>`.
+- **After installation**, restart the Claude Code session and run `/revref init` in the project.
+- **Without scripts.** You can copy manually: the folder `skill-en/revref` → `~/.claude/skills/revref` (or `~/.dsh/skills/revref`), the files `agents-en/*.md` → `~/.claude/agents/` (Claude Code only), `CHANGELOG.en.md` → into the skill folder as `CHANGELOG.md`. Then replace `__REVREF_SKILL_DIR__` in `SKILL.md` and the agent files with the path to the skill folder (with forward slashes). Without this replacement the guard hook will be inactive.
 
-## Быстрый старт
+## Quick start
 
-1. Откройте проект в Claude Code и выполните `/revref init`. Агент задаст до 5 вопросов: уровень автономии, критичные части, запреты, бюджет (время и лимит токенов, например «3 суток, остановиться при 95% недельного лимита»), push. Если порог лимита задан, агент предложит подключить статусную строку RevRef (см. [Лимит токенов](#лимит-токенов)). Затем он создаст ветку прогона и папку `.revref/` и зафиксирует базовую линию.
-2. Проверьте `.revref/CONFIG.md`, при необходимости поправьте.
-3. Выполните `/revref run`. Дальше прогон идёт автономно.
-4. Время от времени выполняйте `/revref ask`, чтобы ответить на самые важные вопросы прямо в чате, или `/revref status` для сводки. Полная очередь — в `.revref/DECISIONS.md`.
+1. Open the project in Claude Code and run `/revref init`. The agent asks up to 5 questions: autonomy level, critical parts, prohibitions, budget (time and token limit, e.g. "3 days, stop at 95% of the weekly limit"), push. If a limit threshold is set, the agent offers to connect the RevRef status line (see [Token limit](#token-limit)). It then creates the run branch and the `.revref/` folder and records the baseline.
+2. Check `.revref/CONFIG.md` and adjust it if needed.
+3. Run `/revref run`. From here the run proceeds autonomously.
+4. From time to time, run `/revref ask` to answer the most important questions right in the chat, or `/revref status` for a summary. The full queue is in `.revref/DECISIONS.md`.
 
-## Команды
+## Commands
 
-| Команда | Что делает |
+| Command | What it does |
 |---|---|
-| `/revref init` | Подготовка прогона (W0); единственная интерактивная команда. Прежний прогон в `.revref/` уходит в архив без отдельного вопроса |
-| `/revref run` | Продолжить конвейер или незавершённую очередь с текущего места до конца или до условия остановки |
-| `/revref resume` | Сверка с git (чужие коммиты, основная ветка, WIP), ответы владельца, проверки — затем `run` |
-| `/revref checkpoint` | Записать полное состояние сейчас, чтобы продолжить позже где угодно |
-| `/revref status` | Краткая сводка по файлам, ничего не меняет |
-| `/revref decisions` | Показать всю очередь на подтверждение и обработать ваши ответы из файла |
-| `/revref ask [N\|all\|ID…]` | Показать в чате самые приоритетные вопросы без ответа (по умолчанию 1) или конкретные по ID и сразу принять ответы; связанные решения — группой; можно вводить во время работы агентов |
-| `/revref wait` | Остановиться и дождаться ответов владельца: полный чекпоинт, карточки решений и блокирующий вопрос. В DSH с «Автономным циклом» — корректная остановка прогона (сам цикл выключает только владелец); вызывается автоматически, когда автономная работа исчерпана |
-| `/revref review <список> [--verify\|--fix] [--optimal]` | Одно или несколько выбранных ревью за один запуск, в порядке очереди (параметры — ниже) |
-| `/revref wave <Wn>` | Выполнить одну волну |
-| `/revref finish` | Влить результат в ветку `test` (стенд тест-контура): разбор решений, пробное слияние, проверки, чек-лист для стенда; слияние и push — каждое после вашего «да» |
-| `/revref abandon` | Отказаться от начатого прогона: архивирование веток и `.revref/` после вашего «да», возврат на основную ветку; полное удаление — вашими командами |
+| `/revref init` | Prepare the run (W0); the only interactive command. A previous run in `.revref/` goes to the archive without a separate question |
+| `/revref run` | Continue the pipeline or an unfinished queue from the current point to the end or until a stop condition |
+| `/revref resume` | Reconcile with git (other people's commits, main branch, WIP), owner answers, checks — then `run` |
+| `/revref checkpoint` | Record the full state now, to continue later anywhere |
+| `/revref status` | Short summary from the files; changes nothing |
+| `/revref decisions` | Show the whole approval queue and process your answers from the file |
+| `/revref ask [N\|all\|ID…]` | Show in the chat the highest-priority unanswered questions (1 by default) or specific ones by ID and accept the answers right away; linked decisions as a group; can be entered while agents are working |
+| `/revref wait` | Stop and wait for owner answers: a full checkpoint, decision cards and a blocking question. In DSH with the Autonomous loop this is the correct stop of the run (only the owner switches the loop itself off); it runs automatically when autonomous work is exhausted |
+| `/revref review <list> [--verify\|--fix] [--optimal]` | One or more selected reviews in a single launch, in queue order (parameters below) |
+| `/revref wave <Wn>` | Run a single wave |
+| `/revref finish` | Merge the result into the `test` branch (test stand): decision review, trial merge, checks, stand checklist; merge and push — each after your "yes" |
+| `/revref abandon` | Abandon a started run: archiving of branches and `.revref/` after your "yes", return to the main branch; full deletion — by your commands |
 
-## Параметры команд
+## Command parameters
 
-### `/revref review <список> [режим] [--optimal]`
+### `/revref review <list> [mode] [--optimal]`
 
-| Параметр | Значения | По умолчанию | Что делает |
+| Parameter | Values | Default | What it does |
 |---|---|---|---|
-| `<список>` | ID ревью (`SEC`), имя волны (`W2`), `all`; через пробел или запятую | — (обязателен) | Какие ревью запустить. `W<n>` раскрывается в ревью волны (`W1` и `W9` — в `QR`), `all` — во все применимые ревью W2–W8. Повторы убираются. Если ID неизвестен, ничего не запускается |
-| *(без флага режима)* | — | ✔ | Только отчёты. Ревью идут параллельно, код не меняется, ветка не создаётся, коммитов нет |
-| `--verify` | — | — | Отчёты и независимая верификация каждого: свежий агент перепроверяет находки и отсеивает ложные. Код не меняется |
-| `--fix` | — | — | Полный цикл для каждого ревью по очереди: ревью → верификация → план → исправления → проверки → веха. Работает в ветке прогона, с коммитами и тегами `Q<n>-<ID>`. Если `.revref/` нет — сначала полная подготовка с вопросами |
-| `--optimal` | — | — | Переупорядочить список по конвейеру (QR, затем W2 → W8). Без флага порядок ваш: при рискованном порядке агент предупредит, но выполнит |
+| `<list>` | Review ID (`SEC`), wave name (`W2`), `all`; separated by spaces or commas | — (required) | Which reviews to run. `W<n>` expands to the wave's reviews (`W1` and `W9` — to `QR`), `all` — to all applicable reviews of W2–W8. Duplicates are removed. If an ID is unknown, nothing is run |
+| *(no mode flag)* | — | ✔ | Reports only. Reviews run in parallel, code is not changed, no branch is created, no commits |
+| `--verify` | — | — | Reports plus independent verification of each: a fresh agent rechecks the findings and filters out false ones. Code is not changed |
+| `--fix` | — | — | Full cycle for each review in turn: review → verification → plan → fixes → checks → milestone. Works in the run branch, with commits and `Q<n>-<ID>` tags. If there is no `.revref/`, full preparation with questions comes first |
+| `--optimal` | — | — | Reorder the list according to the pipeline (QR, then W2 → W8). Without the flag the order is yours: if the order is risky, the agent warns you but still runs it |
 
-`--verify` и `--fix` взаимоисключающие (`--fix` включает верификацию). `--optimal` сочетается с любым режимом.
+`--verify` and `--fix` are mutually exclusive (`--fix` includes verification). `--optimal` can be combined with any mode.
 
-**Область — коммиты.** Любое ревью можно ограничить изменениями из выбранных коммитов:
+**Scope — commits.** Any review can be limited to the changes of selected commits:
 
-| Параметр | Значения | Что делает |
+| Parameter | Values | What it does |
 |---|---|---|
-| `--commits N` | число | Последние N коммитов текущей ветки |
-| `--commits <sha>,<sha>` | список SHA через запятую | Только перечисленные коммиты |
-| `--commits <от>..<до>` | диапазон git | Коммиты диапазона |
-| `--since <дата>`, `--until <дата>` | дата (`2026-10-01`) | Коммиты за период; можно вместе с `--commits N` |
+| `--commits N` | a number | The last N commits of the current branch |
+| `--commits <sha>,<sha>` | comma-separated SHAs | Only the listed commits |
+| `--commits <from>..<to>` | a git range | The commits of the range |
+| `--since <date>`, `--until <date>` | a date (`2026-10-01`) | Commits within a period; can be combined with `--commits N` |
 
-Ревьюеры смотрят на diff этих коммитов и на то, что он затрагивает; у каждой находки отмечено происхождение: внесено коммитом, усилено коммитом или существовало ранее. Отчёты — `reports/<ID>.changes-<дата>.md`, ID находок — `SEC-c01`. Без списка ревью (`/revref review --commits 5`) запускается комплексное ревью изменений (QR), как ревью пул-реквеста.
+Reviewers look at the diff of these commits and what it affects; each finding is marked with its origin: introduced by a commit, aggravated by a commit, or pre-existing. Reports — `reports/<ID>.changes-<date>.md`, finding IDs — `SEC-c01`. Without a review list (`/revref review --commits 5`), a comprehensive review of the changes (QR) runs, like a pull request review.
 
-### Остальные команды с аргументами
+### Other commands with arguments
 
-| Команда | Аргумент | Что делает |
+| Command | Argument | What it does |
 |---|---|---|
-| `/revref ask [N\|all\|ID…]` | число, `all` или ID решений (`D-015`); можно смешивать; по умолчанию `1` | Сколько самых приоритетных вопросов показать или какие именно |
-| `/revref wait` | *(без аргументов)* | Остановиться и дождаться ответов владельца: чекпоинт «остановлен: ждёт ответов владельца», карточки и блокирующий вопрос; только когда автономная работа исчерпана (`PROTOCOLS.md` §13) |
-| `/revref wave <Wn>` | `W0`…`W9` | Выполнить одну волну конвейера с проверкой её условий входа |
-| `/revref` | *(без аргументов)* | Если прогон есть — краткий статус и предложение `resume`; если нет — справка по командам |
+| `/revref ask [N\|all\|ID…]` | a number, `all` or decision IDs (`D-015`); can be mixed; `1` by default | How many of the highest-priority questions to show, or which ones |
+| `/revref wait` | *(no arguments)* | Stop for owner answers: checkpoint "stopped: waiting for owner answers", cards and a blocking question; only when autonomous work is exhausted (`PROTOCOLS.md` §13) |
+| `/revref wave <Wn>` | `W0`…`W9` | Run a single pipeline wave, checking its entry conditions |
+| `/revref` | *(no arguments)* | If a run exists — a short status and an offer to `resume`; if not — command help |
 
-`init`, `run`, `resume`, `checkpoint`, `status`, `decisions`, `wait` и `finish` параметров не принимают. Их поведение настраивается в `.revref/CONFIG.md`.
+`init`, `run`, `resume`, `checkpoint`, `status`, `decisions`, `wait` and `finish` take no parameters. Their behavior is configured in `.revref/CONFIG.md`.
 
-### Настройки прогона в `CONFIG.md`
+### Run settings in `CONFIG.md`
 
-| Настройка | По умолчанию | Значения |
+| Setting | Default | Values |
 |---|---|---|
-| Уровень автономии | сбалансированный | осторожный · сбалансированный · смелый |
-| Порог исправлений | Medium | Critical · High · Medium · Low; ниже порога — только быстрые победы |
-| Денежные исправления по ТЗ | класс C | класс C · класс B (только однозначно предписанные ТЗ, без изменения цен и правил) |
-| Ревью | все применимые | принудительно включить / исключить ID |
-| Свои ревью | нет | `ID → волна`, например `VPN → W2` |
-| Область | весь репозиторий | включить / исключить пути |
-| Параллельность | до 4 субагентов | число |
-| Бюджет времени | без ограничения | длительность или дата |
-| Лимит токенов | 95% недельного лимита | N% недельного лимита · не следить ([Лимит токенов](#лимит-токенов)) |
-| Автономный цикл (DSH) | не используется | не используется · да · нет ([Автономный цикл в DSH](#автономный-цикл-в-dsh)) |
-| Ветка прогона | `revref/ГГГГ-ММ-ДД` | имя ветки |
-| Основная ветка | `main` | имя ветки (агент её не меняет) |
-| Целевая ветка (`finish`) | `test` | имя ветки |
-| Push | запрещён | запрещён · разрешён только для ветки прогона |
-| Способ слияния (`finish`) | спросить | merge --no-ff · squash · pull request |
-| `.revref/` при слиянии (`finish`) | спросить | оставить · архивировать · убрать |
-| Хранить `.revref/` в git | да | да · нет |
-| Язык отчётов | русский | любой |
+| Autonomy level | balanced | cautious · balanced · bold |
+| Fix threshold | Medium | Critical · High · Medium · Low; below the threshold — quick wins only |
+| Monetary fixes per spec | class C | class C · class B (only fixes unambiguously prescribed by the spec, no change to prices or rules) |
+| Reviews | all applicable | force-include / exclude IDs |
+| Custom reviews | none | `ID → wave`, for example `VPN → W2` |
+| Scope | whole repository | include / exclude paths |
+| Parallelism | up to 4 subagents | a number |
+| Time budget | unlimited | a duration or a date |
+| Token limit | 95% of the weekly limit | N% of the weekly limit · do not track ([Token limit](#token-limit)) |
+| Autonomous loop (DSH) | not used | not used · yes · no ([DSH autonomous loop](#dsh-autonomous-loop)) |
+| Run branch | `revref/YYYY-MM-DD` | branch name |
+| Main branch | `main` | branch name (the agent does not change it) |
+| Target branch (`finish`) | `test` | branch name |
+| Push | forbidden | forbidden · allowed for the run branch only |
+| Merge method (`finish`) | ask | merge --no-ff · squash · pull request |
+| `.revref/` on merge (`finish`) | ask | keep · archive · remove |
+| Keep `.revref/` in git | yes | yes · no |
+| Report language | English | any |
 
-### Установщики
+### Installers
 
-| `install.sh` | `install.ps1` | Что делает |
+| `install.sh` | `install.ps1` | What it does |
 |---|---|---|
-| *(без параметров)* | *(без параметров)* | Claude Code, глобальная установка в `$CLAUDE_CONFIG_DIR` или `~/.claude` |
-| `--project <путь>` | `-Project <путь>` | Claude Code, только в проект: `<путь>/.claude` |
-| `--dsh` | `-Dsh` | DSH, глобальная установка в `${DSH_HOME:-~/.dsh}/skills`; агенты не ставятся |
-| `--dsh --project <путь>` | `-Dsh -Project <путь>` | DSH, только в проект: `<путь>/.dsh/skills` |
-| `--uninstall` | `-Uninstall` | Удалить скилл и агентов; сочетается с `--project` / `-Project` и `--dsh` / `-Dsh`. Резервные копии `*.bak-*` не трогаются |
-| `--lang ru\|en` | `-Lang ru\|en` | Язык набора: промпты, протоколы, шаблоны, отчёты. По умолчанию `ru` |
-| `-h`, `--help` | `Get-Help ./install.ps1` | Краткая справка |
+| *(no parameters)* | *(no parameters)* | Claude Code: global installation into `$CLAUDE_CONFIG_DIR` or `~/.claude` |
+| `--project <path>` | `-Project <path>` | Claude Code: installation into a project only: `<path>/.claude` |
+| `--dsh` | `-Dsh` | DSH: global installation into `${DSH_HOME:-~/.dsh}/skills`; agents are not installed |
+| `--dsh --project <path>` | `-Dsh -Project <path>` | DSH: installation into a project only: `<path>/.dsh/skills` |
+| `--uninstall` | `-Uninstall` | Remove the skill and the agents; can be combined with `--project` / `-Project` and `--dsh` / `-Dsh`. `*.bak-*` backups are left untouched |
+| `--lang ru\|en` | `-Lang ru\|en` | Kit language: prompts, protocols, templates, reports. Default: `ru` |
+| `-h`, `--help` | `Get-Help ./install.ps1` | Short help |
 
-## Работа с ветками git
+## Working with git branches
 
 ```text
-main ──────────────────────────────────────────────────────────────  агент не меняет никогда
-  └─► revref/<дата>                 ветка прогона: все влитые исправления + .revref/
-        ├─◄ revref/task/<ID>        ветки задач исполнителей (worktree), вливает оркестратор
-        ├── revref/pending/D-NNN    решения класса C — не вливаются без владельца
-        └── теги W<n>, Q<n>-<ID>, final
-revref/archive/<прогон>/…              прежние прогоны после повторного init или abandon
-              └──/revref finish──►  test ──вручную, после проверки на стенде──►  main
+main ──────────────────────────────────────────────────────────────  never changed by the agent
+  └─► revref/<date>                 run branch: all merged fixes + .revref/
+        ├─◄ revref/task/<ID>        fixer task branches (worktree), merged by the orchestrator
+        ├── revref/pending/D-NNN    class C decisions — not merged without the owner
+        └── tags W<n>, Q<n>-<ID>, final
+revref/archive/<run>/…                 previous runs after a repeated init or abandon
+              └──/revref finish──►  test ──manually, after checking on the stand──►  main
 ```
 
-### Ветки
+### Branches
 
-| Ветка | Кто и когда создаёт | От чего | Что в ней | Что с ней дальше |
+| Branch | Who creates it and when | Based on | What it contains | What happens next |
 |---|---|---|---|---|
-| `main` (основная, `CONFIG.Основная ветка`) | — | — | База прогона | Агент только читает. Если она ушла вперёд, вливается в ветку прогона при `resume` и в `finish` |
-| `revref/<ГГГГ-ММ-ДД>` | `init` (W0) | Текущий HEAD | Все влитые исправления, решения A и B, состояние `.revref/` | Источник для `finish`; после него остаётся, удаляете вы |
-| `revref/<ГГГГ-ММ-ДД>-q` | `review --fix`, если прогона нет или он завершён | Текущий HEAD | То же для очереди | То же |
-| `revref/archive/<прогон>/run`, `…/task/<ID>`, `…/pending/D-NNN` | Повторный `init` или `abandon` — переименованием | Ветки прежнего прогона | Прежний прогон целиком | Остаются для восстановления; удаляете вы |
-| `revref/task/<ID>` | Исполнитель, на каждую задачу | HEAD ветки прогона | Коммиты одной задачи | Оркестратор вливает после проверок (`merge --no-ff`); влитые удаляются в `finish` |
-| `revref/pending/D-NNN` | Оркестратор, для решения класса C (или B на осторожном уровне) | HEAD ветки прогона | Готовый патч с тестами | Вливается только после вашего подтверждения; неподтверждённые остаются |
-| `test` (целевая, `CONFIG.Целевая ветка`) | — | — | Стенд тест-контура | `finish` вливает в неё после вашего «да», push — после отдельного «да» |
+| `main` (main branch, `CONFIG.Main branch`) | — | — | The run's base | The agent only reads it. If it has moved ahead, it is merged into the run branch on `resume` and in `finish` |
+| `revref/<YYYY-MM-DD>` | `init` (W0) | Current HEAD | All merged fixes, A and B decisions, the `.revref/` state | The source for `finish`; remains afterwards, you delete it |
+| `revref/<YYYY-MM-DD>-q` | `review --fix`, if there is no run or it is finished | Current HEAD | The same for a queue | The same |
+| `revref/archive/<run>/run`, `…/task/<ID>`, `…/pending/D-NNN` | A repeated `init` or `abandon` — by renaming | Branches of the previous run | The whole previous run | Kept for restoring; you delete them |
+| `revref/task/<ID>` | Fixer, one per task | HEAD of the run branch | Commits of a single task | The orchestrator merges it after checks (`merge --no-ff`); merged ones are deleted in `finish` |
+| `revref/pending/D-NNN` | Orchestrator, for a class C decision (or B at the cautious level) | HEAD of the run branch | A ready patch with tests | Merged only after your approval; unapproved ones remain |
+| `test` (target branch, `CONFIG.Target branch`) | — | — | Test stand | `finish` merges into it after your "yes", push — after a separate "yes" |
 
-### Коммиты
+### Commits
 
-| Префикс | Что за коммит |
+| Prefix | What the commit is |
 |---|---|
-| `revref(W0): инициализация прогона` | Создание `.revref/` и базовой линии |
-| `revref(W<n>): <задача> <суть>` | Исправление в волне; трейлеры `Findings: BUG-07, EDGE-03` и `Decision: D-012` |
-| `revref(Q<n>): <задача> <суть>` | Исправление в очереди `review --fix` |
-| `revref(state): …` | Чекпоинт, обработка ответов владельца, состояние после слияния задачи |
-| `revref(wip): …` | Незавершённая работа, зафиксированная при чекпоинте (вместо stash) |
-| `revref(finish): …` | Шаги команды `finish` |
-| `revref(W0): архив прогона <прогон>` | Перенос `.revref/` прежнего прогона в `.revref/archive/<прогон>/` |
+| `revref(W0): run initialization` | Creation of `.revref/` and the baseline |
+| `revref(W<n>): <task> <summary>` | A fix in a wave; trailers `Findings: BUG-07, EDGE-03` and `Decision: D-012` |
+| `revref(Q<n>): <task> <summary>` | A fix in a `review --fix` queue |
+| `revref(state): …` | Checkpoint, processing of owner answers, state after a task merge |
+| `revref(wip): …` | Unfinished work committed at a checkpoint (instead of stash) |
+| `revref(finish): …` | Steps of the `finish` command |
+| `revref(W0): archive of run <run>` | Moving the previous run's `.revref/` to `.revref/archive/<run>/` |
 
-Каждый коммит ветки прогона содержит код и согласованное с ним состояние `.revref/`, поэтому с любого коммита можно продолжить работу. По трейлерам видно, какую находку и какое решение реализует коммит: `git log --grep "D-012"`.
+Every commit of the run branch contains code and the `.revref/` state consistent with it, so work can be resumed from any commit. The trailers show which finding and which decision a commit implements: `git log --grep "D-012"`.
 
-### Теги
+### Tags
 
-Создаются локально, автоматически не отправляются.
+Created locally, not pushed automatically.
 
-| Тег | Где | Зачем |
+| Tag | Where | Why |
 |---|---|---|
-| `revref/<дата>/W<n>` | Ветка прогона, конец волны | Точка отката к состоянию после волны |
-| `revref/<дата>/Q<n>-<ID>` | Ветка прогона, конец элемента очереди | То же для очереди |
-| `revref/<дата>/final` | Ветка прогона перед слиянием | Полная история прогона, включая `.revref/`, даже если в `test` вы его не переносили |
-| `revref/<дата>/merged` | Целевая ветка после слияния | Отметка, какой коммит `test` содержит результат прогона |
-| `revref/<дата>/archived` | Последний коммит прогона перед архивированием | Точка восстановления прогона после повторного `init` или `abandon` |
+| `revref/<date>/W<n>` | Run branch, end of a wave | Rollback point to the state after the wave |
+| `revref/<date>/Q<n>-<ID>` | Run branch, end of a queue item | The same for a queue |
+| `revref/<date>/final` | Run branch before the merge | Full history of the run, including `.revref/`, even if you did not carry it over into `test` |
+| `revref/<date>/merged` | Target branch after the merge | Marks which `test` commit contains the run's result |
+| `revref/<date>/archived` | The run's last commit before archiving | Restore point of the run after a repeated `init` or `abandon` |
 
-### Правила
+### Rules
 
-- **Агент никогда не:**
-  - меняет `main`;
-  - делает force-push и rebase опубликованных веток;
-  - трогает чужие незакоммиченные изменения;
-  - удаляет чужие ветки и ветки прежних прогонов — их он только переименовывает в архив.
-- **Push.** Ветку прогона — только если это разрешено в `CONFIG.md`. Ветку `test` — только в `finish` и только по отдельному «да», потому что это выкатка на стенд.
-- **Сторожевой хук** технически блокирует нарушения этих правил во время прогона, даже если агент ошибётся (раздел «Безопасность»).
-- **Синхронизация — только через merge, не rebase.** `main` вливается в ветку прогона, а `test` в ветку прогона не вливается никогда: там могут быть чужие непроверенные изменения.
-- **Откат:**
-  - волна или очередь — `git revert` её диапазона коммитов (границы — по тегам);
-  - отдельное решение — `git revert` его коммитов (`git log --grep "D-NNN"`);
-  - весь результат на стенде — `git revert -m 1 <коммит слияния>` в `test`.
+- **The agent never:**
+  - changes `main`;
+  - force-pushes or rebases published branches;
+  - touches other people's uncommitted changes;
+  - deletes other people's branches and branches of previous runs — it only renames them into the archive.
+- **Push.** The run branch — only if allowed in `CONFIG.md`. The `test` branch — only in `finish` and only after a separate "yes", because this is a deployment to the stand.
+- **The guard hook** technically blocks violations of these rules during a run, even if the agent makes a mistake (see the "Security" section).
+- **Synchronization — only via merge, not rebase.** `main` is merged into the run branch, while `test` is never merged into the run branch: it may contain other people's unverified changes.
+- **Rollback:**
+  - a wave or a queue — `git revert` of its commit range (boundaries are given by the tags);
+  - a single decision — `git revert` of its commits (`git log --grep "D-NNN"`);
+  - the whole result on the stand — `git revert -m 1 <merge commit>` in `test`.
 
-## Безопасность
+## Security
 
-### Секреты
+### Secrets
 
-Отчёты, решения и журналы из `.revref/` коммитятся, через `finish` попадают в `test`, а оттуда в `main` и, возможно, в публичный репозиторий. Поэтому значения ключей, токенов, паролей и персональных данных никогда не попадают ни в эти файлы, ни в сообщения коммитов, ни в чат. Вместо значения агент указывает место, тип и замаскированный вид: `sk-l…9f`.
+Reports, decisions and journals from `.revref/` are committed, reach `test` via `finish`, and from there go to `main` and possibly to a public repository. Therefore the values of keys, tokens, passwords and personal data never get into these files, commit messages or the chat. Instead of the value, the agent gives the location, the type and a masked form: `sk-l…9f`.
 
-Найденный в коде секрет — находка SEC не ниже High. Убрать его из кода агент может сам. Ротация ключа и очистка истории git — решение владельца (класс C): агент не может ротировать ключ и не переписывает историю.
+A secret found in the code is a SEC finding of at least High. The agent may remove it from the code itself. Rotating the key and cleaning git history is the owner's decision (class C): the agent cannot rotate the key and does not rewrite history.
 
 ### Prompt injection
 
-Субагенты читают весь проект, включая чужой код, сгенерированные файлы и тестовые данные. Там может оказаться текст, обращённый к ИИ-агенту: «игнорируй правила», «сделай push». Набор считает содержимое проекта и выводы инструментов данными, а не инструкциями. Указания принимаются только от владельца (чат, ответы в `DECISIONS.md` и `INBOX.md`, `CONFIG.md`, свои ревью) и из файлов набора. Попытка управлять агентом через текст в проекте становится находкой SEC, а владелец получает сообщение в чат.
+Subagents read the whole project, including other people's code, generated files and test data. These may contain text addressed to an AI agent: "ignore the rules", "do a push". The kit treats project content and tool output as data, not instructions. Instructions are accepted only from the owner (chat, answers in `DECISIONS.md` and `INBOX.md`, `CONFIG.md`, custom reviews) and from the kit's files. An attempt to control the agent through text in the project becomes a SEC finding, and the owner gets a message in the chat.
 
-### Сторожевой хук
+### Guard hook
 
-Правила работы с git продублированы техническим ограничителем — хуком `skill/revref/hooks/guard.sh`. Он подключается автоматически через frontmatter скилла (в основной сессии после любой команды `/revref`) и агентов (внутри субагентов) и действует, только пока в репозитории есть `.revref/STATE.md`.
+The git rules are backed by a technical limiter — the hook `skill-en/revref/hooks/guard.sh`. It is connected automatically through the frontmatter of the skill (in the main session after any `/revref` command) and of the agents (inside subagents), and it is active only while the repository contains `.revref/STATE.md`.
 
-| Блокирует | Примеры |
+| Blocks | Examples |
 |---|---|
-| Изменение основной ветки | `commit`, `merge`, `reset`, `pull` на `main`; `checkout main && commit` |
-| Push основной ветки, force-push, удаление удалённых веток | `git push origin main`, `git push -f`, `git push origin +branch`, `git push --delete` |
-| Переписывание истории | `git rebase` (кроме `--abort`), `filter-branch`, `filter-repo` |
-| Потерю незакоммиченной работы | `git clean -f`, `git stash drop`, `git checkout -- .`, `git restore .`, `git reset --hard` при изменениях, `git branch -D` |
-| Секреты | Секрет в сообщении коммита или в добавляемых строках `.revref/` и `docs/revref/` |
+| Changing the main branch | `commit`, `merge`, `reset`, `pull` on `main`; `checkout main && commit` |
+| Pushing the main branch, force-push, deleting remote branches | `git push origin main`, `git push -f`, `git push origin +branch`, `git push --delete` |
+| Rewriting history | `git rebase` (except `--abort`), `filter-branch`, `filter-repo` |
+| Losing uncommitted work | `git clean -f`, `git stash drop`, `git checkout -- .`, `git restore .`, `git reset --hard` with changes present, `git branch -D` |
+| Secrets | A secret in a commit message or in lines being added to `.revref/` and `docs/revref/` |
 
-- Заблокированная команда не выполняется, а агент получает объяснение на языке прогона.
-- Отключить хук для сессии может только владелец: переменная окружения `REVREF_GUARD=off`.
-- На Windows хуки Claude Code выполняются через Git Bash. Без Git Bash хук неактивен, и правила держатся только на политике.
-- **DSH:** хуков инструментов нет, автоматическая блокировка невозможна. Перед каждой защищённой командой агент запускает ту же проверку вручную: `hooks/guard.ps1 -Command "<команда>"` (Windows/PowerShell) или `hooks/guard.sh --check "<команда>"` (macOS, Linux, Git Bash). Коды те же: 0 — можно, 2 — запрещено, 3 — проверить нечем. Это требует дисциплины: правила `POLICY.md` действуют независимо от проверки (`skill/revref/PLATFORMS.md` → «Сторожевой хук»).
-- Хук покрыт тестами: `sh scripts/test_guard.sh`; оболочка `hooks/guard.ps1` и режим `--check` — там же и в `scripts/test_guard.ps1`.
+- A blocked command is not executed, and the agent receives an explanation in the run's language.
+- Only the owner can disable the hook for a session: the environment variable `REVREF_GUARD=off`.
+- On Windows, Claude Code hooks run through Git Bash. Without Git Bash the hook is inactive, and the rules rely on the policy alone.
+- **DSH:** there are no tool hooks, so automatic blocking is impossible. Before every protected command the agent runs the same check manually: `hooks/guard.ps1 -Command "<command>"` (Windows/PowerShell) or `hooks/guard.sh --check "<command>"` (macOS, Linux, Git Bash). The codes are the same: 0 — allowed, 2 — forbidden, 3 — no way to check. This requires discipline: the `POLICY.md` rules apply regardless of the check (`skill-en/revref/PLATFORMS.md` → "Guard check").
+- The hook is covered by tests: `sh scripts/test_guard.sh`; the `hooks/guard.ps1` wrapper and the `--check` mode are covered there and in `scripts/test_guard.ps1`.
 
-## Результат и слияние
+## Result and merge
 
 ```text
-main ──► revref/<дата> ──/revref finish──► test (стенд тест-контура) ──вручную, после проверки──► main
+main ──► revref/<date> ──/revref finish──► test (test stand) ──manually, after checking──► main
 ```
 
-Прогон ничего никуда не вливает сам. Результат — ветка `revref/<дата>` с исправлениями, pending-ветки с решениями класса C, теги волн и `.revref/FINAL_REPORT.md`.
+A run never merges anything anywhere on its own. The result is the `revref/<date>` branch with the fixes, pending branches with class C decisions, wave tags and `.revref/FINAL_REPORT.md`.
 
-Командой `/revref finish` результат вливается в целевую ветку — по умолчанию `test`, настраивается в `CONFIG.md`. **`main` агент не меняет никогда:** вы вливаете `test` в `main` вручную после проверки на стенде.
+The `/revref finish` command merges the result into the target branch — `test` by default, configurable in `CONFIG.md`. **The agent never changes `main`:** you merge `test` into `main` manually after checking on the stand.
 
-Шаги `finish`:
-1. **Неотвеченные решения.** Агент выводит список и ждёт ответа. Отвечать можно в чате, в том числе пакетно: «D-004 отклоняю, остальные B подтверждаю». Неподтверждённые изменения поведения на стенд не попадут. Решения C без ответа считаются отклонёнными для этого слияния, их ветки остаются на будущее.
-2. **Обработка ответов.** Отклонённое откатывается вместе с зависимыми изменениями, подтверждённые pending-ветки вливаются.
-3. **Синхронизация и пробное слияние.** Свежий `main` вливается в ветку прогона. Затем во временной копии выполняется пробное слияние в `test` с проверками. `test` в ветку прогона не вливается: там могут быть чужие непроверенные изменения.
-4. **Итог и чек-лист.** Что войдёт и что останется за бортом, плюс **`STAND_CHECKLIST.md`**: что и как проверить на стенде, какие переменные и миграции нужны стенду, как откатить.
-5. **Способ слияния** (merge, squash или PR в `test`) и судьба `.revref/`. Помните, что всё из `test` потом уйдёт в `main`.
-6. **Слияние в `test`** локально, после вашего «да».
-7. **Push `test`** (запускает выкатку на стенд) — после отдельного «да». Никогда не force.
-8. **Уборка.** Удаляются влитые временные ветки, ставится тег `merged`, пишется итоговое сообщение с напоминанием про ручное вливание в `main`.
+`finish` steps:
+1. **Unanswered decisions.** The agent lists them and waits for an answer. You can answer in the chat, including in batch: "D-004 reject, confirm the rest of B". Unapproved behavior changes will not reach the stand. C decisions without an answer are considered rejected for this merge; their branches remain for the future.
+2. **Processing the answers.** What was rejected is reverted together with dependent changes; approved pending branches are merged.
+3. **Synchronization and trial merge.** A fresh `main` is merged into the run branch. Then a trial merge into `test` with checks is performed in a temporary copy. `test` is not merged into the run branch: it may contain other people's unverified changes.
+4. **Summary and checklist.** What will be included and what will be left out, plus **`STAND_CHECKLIST.md`**: what to check on the stand and how, which variables and migrations the stand needs, how to roll back.
+5. **Merge method** (merge, squash or PR into `test`) and what happens to `.revref/`. Remember that everything in `test` will later go to `main`.
+6. **Merge into `test`** locally, after your "yes".
+7. **Push `test`** (triggers the deployment to the stand) — after a separate "yes". Never force.
+8. **Cleanup.** Merged temporary branches are deleted, the `merged` tag is set, and a final message is written with a reminder about the manual merge into `main`.
 
-Если остановиться на любом шаге, `finish` можно повторить позже с того же места.
+If you stop at any step, `finish` can be repeated later from the same point.
 
-## Новый прогон и отказ от прогона
+## A new run and abandoning a run
 
-- **Повторный `init`.** Если в `.revref/` остался прежний прогон — завершённый или нет, — агент не спрашивает отдельно, а сразу задаёт вопросы `init`. В том же сообщении он пишет, что за прежний прогон и что с ним будет. Ответы на вопросы — согласие. Если новый прогон не нужен, вместо ответов выполните `/revref resume` (продолжить) или `/revref finish` (влить завершённый).
-- **Что происходит с прежним прогоном.** Он уходит в архив, ничего не удаляется:
-  - файлы — в `.revref/archive/<прогон>/`;
-  - ветки — в `revref/archive/<прогон>/run`, `…/task/…`, `…/pending/…`;
-  - тег `revref/<прогон>/archived` — точка восстановления.
+- **Repeated `init`.** If `.revref/` still holds a previous run — finished or not — the agent does not ask separately but goes straight to the `init` questions. In the same message it says what the previous run is and what will happen to it. Answers to the questions are consent. If you do not want a new run, run `/revref resume` (continue) or `/revref finish` (merge a finished one) instead of answering.
+- **What happens to the previous run.** It goes to the archive, nothing is deleted:
+  - files — to `.revref/archive/<run>/`;
+  - branches — to `revref/archive/<run>/run`, `…/task/…`, `…/pending/…`;
+  - the tag `revref/<run>/archived` — a restore point.
 
-  Новый прогон начинается от основной ветки, если вы стояли на ветке прежнего прогона: неподтверждённые изменения старого в новый не попадут. Прежние ответы `init` агент предлагает как варианты по умолчанию, а `CONTEXT.md` прежнего прогона — карту проекта и команды — использует как черновик, перепроверяя запуском.
-- **`/revref abandon`** — отказаться от начатого прогона, который решено не завершать. Агент показывает карточку: ветка, коммиты, pending-ветки, решения без ответа. После вашего «да» он архивирует прогон так же, как выше, и переключается на основную ветку; её он не меняет.
-- **Восстановить** брошенный прогон: переименуйте ветки обратно и выполните `/revref resume`. Агент выводит точные команды.
-- **Удалить совсем** можно только вашими командами: удаление безвозвратно, и сторожевой хук не даёт агенту выполнить `git branch -D`:
+  The new run starts from the main branch if you were on the previous run's branch: the old run's unconfirmed changes do not get into the new one. The agent offers your previous `init` answers as defaults and uses the previous run's `CONTEXT.md` — project map and commands — as a draft, verifying it by running.
+- **`/revref abandon`** — abandon a started run that has been decided not to finish. The agent shows a card: branch, commits, pending branches, unanswered decisions. After your "yes" it archives the run the same way as above and switches to the main branch; it does not change that branch.
+- **Restore** an abandoned run: rename the branches back and run `/revref resume`. The agent prints the exact commands.
+- **Delete completely** only with your own commands: deletion is irreversible, and the guard hook does not let the agent run `git branch -D`:
 
   ```bash
-  git for-each-ref --format='%(refname:short)' refs/heads/revref/archive/<прогон>/ | xargs git branch -D
-  git tag -l 'revref/<прогон>/*' | xargs git tag -d
+  git for-each-ref --format='%(refname:short)' refs/heads/revref/archive/<run>/ | xargs git branch -D
+  git tag -l 'revref/<run>/*' | xargs git tag -d
   ```
 
-## Выборочный запуск: одно ревью или очередь
+## Selective runs: a single review or a queue
 
-Полный конвейер не обязателен: можно запустить любое ревью отдельно или собрать очередь из нескольких.
+The full pipeline is not mandatory: you can run any review on its own or build a queue of several.
 
 ```text
-/revref review SEC                      одно ревью безопасности, только отчёт
-/revref review SEC BUG EDGE --verify    три отчёта, каждый перепроверен независимым агентом
-/revref review TEST HYG DRY --fix       по очереди: тесты → очистка → дублирование, с исправлениями
-/revref review W2 DX --fix --optimal    все ревью волны W2 и DX, переупорядоченные по конвейеру
-/revref review all                      отчёты по всем применимым ревью
-/revref review --commits 5              комплексное ревью последних пяти коммитов
-/revref review SEC BUG --since 2026-10-01 --until 2026-10-10   безопасность и баги в коммитах за период
-/revref review SEC --commits a1b2c3d,e4f5a6b                   только перечисленные коммиты
+/revref review SEC                      a single security review, report only
+/revref review SEC BUG EDGE --verify    three reports, each rechecked by an independent agent
+/revref review TEST HYG DRY --fix       in turn: tests → cleanup → duplication, with fixes
+/revref review W2 DX --fix --optimal    all reviews of wave W2 plus DX, reordered according to the pipeline
+/revref review all                      reports for all applicable reviews
+/revref review --commits 5              a comprehensive review of the last five commits
+/revref review SEC BUG --since 2026-10-01 --until 2026-10-10   security and bugs in the commits of a period
+/revref review SEC --commits a1b2c3d,e4f5a6b                   only the listed commits
 ```
 
-- **Список.** ID через пробел или запятую. Имена волн (`W2`, `W5`…) раскрываются в их ревью, `all` — во все применимые.
-- **Режимы:**
+- **List.** IDs separated by spaces or commas. Wave names (`W2`, `W5`…) expand to their reviews, `all` — to all applicable ones.
+- **Modes:**
 
-  | Режим | Что происходит | Ветка и коммиты |
+  | Mode | What happens | Branch and commits |
   |---|---|---|
-  | без флага | Только отчёты; ревью идут параллельно | Нет, код не меняется |
-  | `--verify` | Отчёты и независимая верификация каждого | Нет, код не меняется |
-  | `--fix` | Каждое ревью по очереди проходит полный цикл: ревью → верификация → план → исправления → проверки → веха с чекпоинтом. Следующее начинается после проверок предыдущего | Ветка прогона, коммиты, теги `Q<n>-<ID>` |
+  | no flag | Reports only; reviews run in parallel | None, code is not changed |
+  | `--verify` | Reports plus independent verification of each | None, code is not changed |
+  | `--fix` | Each review in turn goes through the full cycle: review → verification → plan → fixes → checks → milestone with checkpoint. The next one starts after the previous one's checks | Run branch, commits, `Q<n>-<ID>` tags |
 
-- **Порядок** — как вы указали. Если он рискован (например, DRY с исправлениями раньше, чем TEST, или документация раньше рефакторинга), агент предупредит, но выполнит. С `--optimal` порядок выстраивается по конвейеру.
-- **Решения в очереди** записываются в `DECISIONS.md` по той же политике, что и в конвейере. Очередь возобновляется через `/revref resume` после обрыва.
-- **Запуск во время конвейера.** Конвейер приостанавливается на границе шага и продолжается после очереди. Ревью, проведённые в очереди с `--fix`, конвейер не повторяет.
-- **Сводка очереди** — в `.revref/reports/QUEUE-<дата>.md`.
+- **Order** — as you specified. If it is risky (for example, DRY with fixes before TEST, or documentation before refactoring), the agent warns you but still runs it. With `--optimal` the order follows the pipeline.
+- **Decisions in a queue** are recorded in `DECISIONS.md` under the same policy as in the pipeline. After an interruption, the queue is resumed with `/revref resume`.
+- **Launching during the pipeline.** The pipeline pauses at a step boundary and continues after the queue. Reviews performed in a queue with `--fix` are not repeated by the pipeline.
+- **Queue summary** — in `.revref/reports/QUEUE-<date>.md`.
 
-## Рабочая папка `.revref/` в проекте
+## The `.revref/` working folder in the project
 
-| Файл | Для кого и зачем |
+| File | For whom and why |
 |---|---|
-| `CONFIG.md` | Ваши настройки прогона и контекст проекта |
-| `DECISIONS.md` | **Главный файл для владельца:** очередь решений на подтверждение и журнал всех автономных решений. Отвечать в нём или в чате через `/revref ask` |
-| `INBOX.md` | Ответы владельца из параллельной сессии или вписанные вручную; оркестратор переносит их в `DECISIONS.md` |
-| `STATE.md` | Чекпоинт: где прогон, что в работе, что дальше |
-| `CONTEXT.md` | Долговременная память: карта проекта, команды, базовая линия, ловушки, ваши указания |
-| `PLAN.md` | Применимость ревью, волны, задачи, группы, статусы |
-| `FINDINGS.md` | Реестр всех находок и их судьба |
-| `JOURNAL.md` | Хронология вех |
-| `reports/`, `tasks/` | Отчёты ревью и заметки исполнителей |
-| `FINAL_REPORT.md` | Итог прогона: что изменилось, что ждёт вас, как влить результат |
-| `STAND_CHECKLIST.md` | Создаётся в `finish`: что и как проверить на стенде перед вливанием в `main` |
-| `archive/<прогон>/` | Прежние прогоны, только для чтения; `CONTEXT.md` последнего служит черновиком для нового `init` |
+| `CONFIG.md` | Your run settings and project context |
+| `DECISIONS.md` | **The main file for the owner:** the approval queue and the log of all autonomous decisions. Answer in it or in the chat via `/revref ask` |
+| `INBOX.md` | Owner answers from a parallel session or entered manually; the orchestrator transfers them to `DECISIONS.md` |
+| `STATE.md` | Checkpoint: where the run is, what is in progress, what comes next |
+| `CONTEXT.md` | Long-term memory: project map, commands, baseline, pitfalls, your instructions |
+| `PLAN.md` | Review applicability, waves, tasks, groups, statuses |
+| `FINDINGS.md` | Register of all findings and what happened to them |
+| `JOURNAL.md` | Chronology of milestones |
+| `reports/`, `tasks/` | Review reports and fixer notes |
+| `FINAL_REPORT.md` | Run summary: what changed, what is waiting for you, how to merge the result |
+| `STAND_CHECKLIST.md` | Created in `finish`: what to check on the stand and how, before merging into `main` |
+| `archive/<run>/` | Previous runs, read-only; the latest one's `CONTEXT.md` serves as a draft for a new `init` |
 
-`.revref/` хранится в git (по умолчанию), и каждый коммит задачи содержит согласованное состояние. Поэтому прогон можно продолжить на любой машине и в любой сессии.
+`.revref/` is kept in git (by default), and every task commit contains a consistent state. That is why a run can be continued on any machine and in any session.
 
-## Как владельцу отвечать на решения
+## How the owner answers decisions
 
-### Прямо в чате: `/revref ask`
-
-```text
-/revref ask          самый приоритетный вопрос
-/revref ask 5        пять самых приоритетных
-/revref ask all      все без ответа
-/revref ask D-015    конкретное решение по ID (и связанные с ним)
-/revref ask 3 D-015  три приоритетных и D-015
-```
-
-Связанные решения, которые нужно принимать вместе или которые зависят друг от друга, показываются одной группой (до 3 карточек), и на группу можно ответить одной строкой: `D-014+D-015 ок`.
-
-Агент показывает карточки, на которые можно ответить, не открывая файлов:
+### Right in the chat: `/revref ask`
 
 ```text
-[1/3] D-012 · 🔴 C · MONEY · блокирует: W2-T04, W2-T07
-Суть: округление сумм в счетах — сейчас математическое, расхождение с банком до 1 коп. на позицию
-Сейчас: патч готов в ветке revref/pending/D-012, в ветку прогона не влит
-Варианты:
-  а) банковское округление при итоговом расчёте — рекомендую: совпадает с выписками банка
-  б) математическое, но только на итоговой сумме
-  в) оставить как есть
-Если не решать: задачи W2-T04 и W2-T07 отложены
-Ответ: «D-012 ок» — принять рекомендацию (а) · «D-012 б» · «D-012 иначе: …» · «D-012 пропустить»
+/revref ask          the highest-priority question
+/revref ask 5        the five highest-priority ones
+/revref ask all      all unanswered
+/revref ask D-015    a specific decision by ID (and the ones linked to it)
+/revref ask 3 D-015  the three highest-priority ones and D-015
 ```
 
-- **Рекомендация есть всегда.** Рекомендуемый вариант — первым, под буквой «а», с причиной. Если агент не может рекомендовать, он пишет почему и чего не хватает для решения.
-- **Как отвечать.**
-  - `D-012 ок` — принять рекомендацию;
-  - `D-012 б` — выбрать другой вариант;
-  - несколько сразу: `D-012 ок; D-015 отклоняю`;
-  - «все ок» — принять рекомендации по всем показанным карточкам;
-  - если показана одна карточка, ID можно не писать;
-  - также принимаются `да` / `нет`, `иначе: …`, `пропустить` (покажется позже) и встречный вопрос `D-012 ?: …`.
-- **Порядок показа:**
-  1. вопрос, из-за которого прогон остановлен;
-  2. то, что блокирует текущую работу;
-  3. класс C, затем B, затем вопросы;
-  4. критичность связанных находок;
-  5. давность.
-- **Во время работы агентов.** Команду можно ввести, пока агенты работают. В сессии оркестратора она обрабатывается сразу, запущенные субагенты не прерываются. Ответ применяется после текущей задачи, разблокированные задачи сразу идут в работу.
-- **Из второй сессии** в той же папке ответы записываются в `.revref/INBOX.md`, а оркестратор забирает их на ближайшей границе шага. Так две сессии не правят `DECISIONS.md` одновременно.
+Linked decisions that must be taken together or depend on each other are shown as one group (up to 3 cards), and a group can be answered with one line: `D-014+D-015 ok`.
 
-### В файле `DECISIONS.md`
+The agent shows cards that you can answer without opening any files:
 
-В `DECISIONS.md` у каждого решения есть поле «Решение владельца». Впишите в него:
-- `ок` — принять рекомендацию агента;
-- `подтверждаю`;
-- `отклоняю`;
-- `иначе: …`;
-- вопрос в свободной форме.
+```text
+[1/3] D-012 · 🔴 C · MONEY · blocks: W2-T04, W2-T07
+Summary: rounding of invoice amounts — currently standard (half-up), discrepancy with the bank of up to 1 cent per line item
+Now: patch ready in branch revref/pending/D-012, not merged into the run branch
+Options:
+  a) banker's rounding in the final calculation — recommended: matches bank statements
+  b) standard, but only on the total amount
+  c) leave as is
+If not decided: tasks W2-T04 and W2-T07 are deferred
+Answer: "D-012 ok" — accept the recommendation (a) · "D-012 b" · "D-012 otherwise: …" · "D-012 skip"
+```
 
-Агент обработает ответ на ближайшей границе шага или по `/revref decisions`:
-- подтверждённое из pending-ветки вольёт;
-- отклонённое откатит вместе с зависимыми изменениями;
-- общие указания («деньги всегда в копейках», «модуль X не трогать») занесёт в `CONTEXT.md`, и они будут действовать до конца прогона.
+- **There is always a recommendation.** The recommended option comes first, under letter "a", with a reason. If the agent cannot recommend anything, it says why and what is missing to make the decision.
+- **How to answer.**
+  - `D-012 ok` — accept the recommendation;
+  - `D-012 b` — choose another option;
+  - several at once: `D-012 ok; D-015 reject`;
+  - "all ok" — accept the recommendations for all shown cards;
+  - if a single card is shown, the ID can be omitted;
+  - `yes` / `no`, `otherwise: …`, `skip` (it will be shown later) and a counter-question `D-012 ?: …` are also accepted.
+- **Display order:**
+  1. the question the run is stopped on;
+  2. whatever blocks the current work;
+  3. class C, then B, then questions;
+  4. severity of the related findings;
+  5. age.
+- **While agents are working.** The command can be entered while agents are working. In the orchestrator session it is processed immediately; running subagents are not interrupted. The answer is applied after the current task, and unblocked tasks go into work right away.
+- **From a second session** in the same folder, answers are written to `.revref/INBOX.md`, and the orchestrator picks them up at the next step boundary. This way two sessions never edit `DECISIONS.md` at the same time.
 
-## Многодневная работа
+### In the `DECISIONS.md` file
 
-- **Режим разрешений.** Для автономности сессии нужны права на правку файлов и запуск команд без подтверждения каждого шага (например, auto mode). Деструктивные и внешние действия запрещены политикой набора независимо от режима.
-- **Ноутбук не должен засыпать.** В настольном приложении включите keep-awake.
-- **Сжатие контекста не страшно.** Всё нужное для продолжения агент держит в файлах и после сжатия перечитывает `STATE.md`.
-- **Обрыв сессии.** Откройте новую и выполните `/revref resume`.
-- **Плановый перерыв** или работа над проектом параллельно: `/revref checkpoint`, потом спокойно коммитьте в основную ветку. При возобновлении агент:
-  - найдёт чужие коммиты;
-  - вольёт основную ветку в ветку прогона;
-  - пометит затронутые находки как устаревшие и перепроверит их;
-  - обновит базовую линию.
+In `DECISIONS.md`, every decision has an "Owner decision" field. Write into it:
+- `ok` — accept the agent's recommendation;
+- `confirm`;
+- `reject`;
+- `otherwise: …`;
+- a free-form question.
 
-### Лимит токенов
+The agent processes the answer at the next step boundary or on `/revref decisions`:
+- merges what was approved from the pending branch;
+- reverts what was rejected, together with dependent changes;
+- records general instructions ("money always in cents", "do not touch module X") in `CONTEXT.md`, and they stay in effect until the end of the run.
 
-Прогон может остановиться сам, не дойдя до упора в лимит подписки: по умолчанию — при 95% недельного лимита. Порог задаётся при `init` вместе с бюджетом времени и меняется в `CONFIG.md` или сообщением в чат, например «лимит 98%».
+## Multi-day work
 
-- **Откуда агент знает процент.** Claude Code передаёт использование лимитов подписки Pro и Max (`rate_limits.seven_day` и `five_hour`) только команде статусной строки. Скрипт `hooks/usage.sh`, подключённый как статусная строка, сохраняет эти данные в `~/.claude/revref/usage.json`, а оркестратор читает их перед каждым шагом и запуском субагентов. Лимит общий для аккаунта, поэтому в процент входят и другие ваши сессии.
-- **За 10 пунктов до порога** агент один раз предупреждает в чате.
-- **На пороге** агент не запускает новых субагентов, дожидается уже запущенных, делает WIP-коммиты и полный чекпоинт. Затем сообщает процент и время сброса окна. Это пауза, а не завершение: после сброса — `/revref resume`.
-- **Пятичасовое окно** прогон не останавливает: при 95% агент заранее делает чекпоинт, чтобы упор в лимит не оборвал работу без записи.
-- **Подключение.** При `init` агент сам предлагает добавить статусную строку в `settings.json` папки конфигурации (`~/.claude` или `$CLAUDE_CONFIG_DIR`) и делает это только после вашего «да». Вручную:
+- **Permission mode.** For autonomy, the session needs permission to edit files and run commands without confirming each step (for example, auto mode). Destructive and external actions are forbidden by the kit's policy regardless of the mode.
+- **The laptop must not go to sleep.** In the desktop app, turn on keep-awake.
+- **Context compaction is not a problem.** The agent keeps everything needed to continue in files and rereads `STATE.md` after compaction.
+- **Session dropped.** Open a new one and run `/revref resume`.
+- **Planned break** or working on the project in parallel: `/revref checkpoint`, then commit to the main branch freely. On resume the agent will:
+  - find other people's commits;
+  - merge the main branch into the run branch;
+  - mark affected findings as stale and recheck them;
+  - update the baseline.
+
+### Token limit
+
+The run can stop on its own before it runs into the subscription limit: by default at 95% of the weekly limit. The threshold is set at `init` together with the time budget and can be changed in `CONFIG.md` or with a chat message such as "limit 98%".
+
+- **How the agent knows the percentage.** Claude Code passes Pro and Max subscription limit usage (`rate_limits.seven_day` and `five_hour`) only to the status line command. The `hooks/usage.sh` script, connected as the status line, saves this data to `~/.claude/revref/usage.json`, and the orchestrator reads it before each step and each launch of subagents. The limit is per account, so the percentage includes your other sessions too.
+- **10 points before the threshold** the agent warns once in the chat.
+- **At the threshold** the agent launches no new subagents, waits for the running ones, makes WIP commits and a full checkpoint. It then reports the percentage and the window reset time. This is a pause, not the end: after the reset, `/revref resume`.
+- **The five-hour window** does not stop the run: at 95% the agent makes a checkpoint in advance so that hitting the limit does not cut the work off without a record.
+- **Connecting.** At `init` the agent offers to add the status line to `settings.json` in the configuration folder (`~/.claude` or `$CLAUDE_CONFIG_DIR`) and does so only after your "yes". Manually:
 
 ```json
 {
   "statusLine": {
     "type": "command",
-    "command": "f=\"<каталог скилла>/hooks/usage.sh\"; if [ -f \"$f\" ]; then sh -c \"$(tr -d '\\r' < \"$f\")\"; fi"
+    "command": "f=\"<skill directory>/hooks/usage.sh\"; if [ -f \"$f\" ]; then sh -c \"$(tr -d '\\r' < \"$f\")\"; fi"
   }
 }
 ```
 
-  `<каталог скилла>` — путь установки с прямыми слешами, например `C:/Users/me/.claude/skills/revref`. Если у вас уже есть своя статусная строка, перенесите её команду одной строкой в `~/.claude/revref/statusline-next`: RevRef сохранит лимиты и покажет вашу строку без изменений.
-- **Без статусной строки** — в приложениях, где её нет, при входе по API-ключу или без Git Bash на Windows — лимит не отслеживается: агент сообщит об этом один раз и будет работать по бюджету времени.
-- **DSH** не имеет статусной строки Claude Code и не отдаёт агенту данные о лимите подписки, поэтому `hooks/usage.sh` там не работает. Если порог задан, агент пишет «не отслеживается» и работает по бюджету времени; процент владелец отслеживает сам (`skill/revref/PLATFORMS.md` → «Лимит токенов»).
-- Скрипт покрыт тестами: `sh scripts/test_usage.sh`.
+  `<skill directory>` is the installation path with forward slashes, e.g. `C:/Users/me/.claude/skills/revref`. If you already have your own status line, move its command, as one line, into `~/.claude/revref/statusline-next`: RevRef saves the limits and shows your line unchanged.
+- **Without a status line** — in apps that do not have one, when signed in with an API key, or without Git Bash on Windows — the limit is not tracked: the agent says so once and works by the time budget.
+- **DSH** has no Claude Code status line and does not give the agent subscription limit data, so `hooks/usage.sh` does not work there. If a threshold is set, the agent writes "not tracked" and works by the time budget; the owner tracks the percentage themselves (`skill-en/revref/PLATFORMS.md` → "Token limit").
+- The script is covered by tests: `sh scripts/test_usage.sh`.
 
-### Автономный цикл в DSH
+### DSH autonomous loop
 
-Плагин `dsh-client-auto-continue` в режиме **«Автономный цикл»** после каждого завершённого хода сам отправляет «Продолжай», пока владелец не остановит его переключателем, паузой или Stop. Навык не может управлять плагином, поэтому RevRef приспосабливается к этому поведению:
+In **Autonomous loop** mode the `dsh-client-auto-continue` plugin sends "Continue" by itself after every completed turn, until the owner stops it with the session switch, a pause or Stop. The skill cannot control the plugin, so RevRef adapts to that behavior:
 
-- **Останавливаться нужно не пустым статусом, а вопросом.** Когда автономная работа исчерпана и дальше нужны ответы владельца, агент делает полный чекпоинт «остановлен: ждёт ответов владельца» и задаёт блокирующий вопрос (`ask_user_question` в DSH). Ход остаётся открытым — `turn/end` не наступает, и цикл не продолжает работу вхолостую. Ответы применяются сразу в том же ходе.
-- **Пока есть работа, вопросов не задаём.** Гейт и чек-лист — `PROTOCOLS.md` §13, `PIPELINE.md` → «Автономный цикл и остановка для получения ответов владельца». Правило «не жди владельца» продолжает действовать, пока прогон может продвигаться сам.
-- **Loop guard не должен срабатывать.** Плагин отменяет и перезапускает зацикленный ход (4 одинаковых сообщения, 4 почти одинаковых абзаца, 12 коротких сообщений за 30 с без инструментов, 5 одинаковых вызовов инструмента). Чтобы до этого не доходило, агент не повторяет статусы и карточки: вместо повтора — чекпоинт и `wait`. Если guard всё же сработал — это сигнал сменить подход или перейти к `wait`.
-- **Ограничение.** Полностью выключить автономный цикл навык не может — это делает владелец в переключателе сессии. Но любую остановку без дальнейшей работы (бюджет времени, лимит токенов, «готово к слиянию», завершённый или влитый прогон) агент тоже завершает вопросом «ждать или выключить цикл / выполнить команду владельца», а не пустым ходом.
+- **Stop with a question, not with an empty status.** When autonomous work is exhausted and owner answers are needed, the agent takes a full checkpoint "stopped: waiting for owner answers" and asks a blocking question (`ask_user_question` in DSH). The turn stays open — no `turn/end` happens, so the loop does not keep working idly. The answers are applied right in the same turn.
+- **While work remains, do not ask.** The gate and checklist are in `PROTOCOLS.md` §13 and `PIPELINE.md` → "Autonomous loop and stopping for owner answers". The "don't wait for the owner" rule still applies while the run can advance on its own.
+- **The loop guard must not fire.** The plugin cancels and restarts a spinning turn (4 identical messages, 4 near-duplicate paragraphs, 12 short messages within 30 s without tools, 5 identical tool calls). To avoid this, the agent does not repeat statuses and cards: instead of repeating — a checkpoint and `wait`. If the guard does fire — that is a signal to change the approach or move to `wait`.
+- **Limitation.** The skill cannot switch the autonomous loop off completely — the owner does that in the session switch. But any stop with no further work (time budget, token limit, "ready to merge", a finished or merged run) is also closed by the agent with a question "wait or switch the loop off / run the owner's command", not with an empty turn.
 
-Команда `/revref wait` делает то же вручную. Настройка «Автономный цикл (DSH)» в `CONFIG.md` фиксирует, включён ли цикл у сессии, чтобы агент не угадывал.
+The `/revref wait` command does the same manually. The "Autonomous loop (DSH)" setting in `CONFIG.md` records whether the session's loop is on, so the agent does not have to guess.
 
-## Без Claude Code или без субагентов
+## Without Claude Code or without subagents
 
-Набор работает и в других агентах (Cursor, Codex, Aider и т.п.):
-- Дайте агенту `skill/revref/ORCHESTRATOR.md` как стартовую инструкцию и укажите путь к папке набора.
-- Если субагентов нет, оркестратор выполняет роли последовательно по описаниям в `roles/`. Верификацию лучше проводить в новой сессии.
+The kit also works in other agents (Cursor, Codex, Aider, etc.):
+- Give the agent `skill-en/revref/ORCHESTRATOR.md` as the starting instruction and point it to the kit folder.
+- If there are no subagents, the orchestrator performs the roles sequentially according to the descriptions in `roles/`. Verification is best done in a new session.
 
-**DSH (DeepSeek Harness)** поддерживается штатно: установите набор с `--dsh` / `-Dsh`, команда `/revref` появится в меню `/` нового сеанса, а различия платформы (асинхронные субагенты, ручная проверка сторожевого хука, отсутствие данных о лимите) описаны в `skill/revref/PLATFORMS.md`. В DSH нет именованных файлов агентов: роль передаётся субагенту текстом из `roles/`.
+**DSH (DeepSeek Harness)** is supported out of the box: install the kit with `--dsh` / `-Dsh`, the `/revref` command appears in the `/` menu of a new session, and the platform differences (asynchronous subagents, manual guard check, no limit data) are described in `skill-en/revref/PLATFORMS.md`. DSH has no named agent files: the role is passed to a subagent as text from `roles/`.
 
-Одиночные промпты ревью из `skill/revref/prompts/reviews/` вместе с `prompts/common-rules.md` можно использовать и вручную, как в v2.
+The individual review prompts from `skill-en/revref/prompts/reviews/`, together with `prompts/common-rules.md`, can also be used manually, as in v2.
 
-## Версии и обновление
+## Versions and updates
 
-- **Версия набора** — в `skill/revref/VERSION`, история изменений — в [CHANGELOG.md](CHANGELOG.md). Версии следуют семантическому версионированию: мажорная — несовместимые изменения формата `.revref/`, минорная — новые совместимые возможности, патч — исправления.
-- **Запись в прогоне.** При `init` версия записывается в `STATE.md`. При `resume` агент сравнивает её с установленной:
-  - та же мажорная версия — продолжает, выполняет разделы «Миграция» из `CHANGELOG.md` (если есть) и записывает обновление в журнал;
-  - другая мажорная версия или откат набора на старую версию — останавливается и спрашивает владельца.
-- **Обновление прямо из Claude Code или DSH:** `/revref update` — для установки в проекте и глобальной. Агент:
-  - находит установки и сравнивает их версии с последним релизом в источнике;
-  - показывает карточку: где установлено, текущая и новая версии, коммит релиза, главное из `CHANGELOG.md` и разделы «Миграция»;
-  - устанавливает только после вашего «да» в чате — тем же языком и в то же место, что при первой установке.
+- **Kit version** — in `skill-en/revref/VERSION`, change history — in [CHANGELOG.en.md](CHANGELOG.en.md). Versions follow semantic versioning: major — incompatible changes to the `.revref/` format, minor — new compatible features, patch — fixes.
+- **Recording in the run.** On `init`, the version is written to `STATE.md`. On `resume`, the agent compares it with the installed one:
+  - same major version — continues, performs the "Migration" sections from `CHANGELOG.md` (if any) and records the update in the journal;
+  - a different major version or a rollback of the kit to an older version — stops and asks the owner.
+- **Updating right from Claude Code or DSH:** `/revref update` — for a project installation and a global one. The agent:
+  - finds the installations and compares their versions with the latest release in the source;
+  - shows a card: where it is installed, the current and new versions, the release commit, the gist of `CHANGELOG.md` and the "Migration" sections;
+  - installs only after your "yes" in the chat — in the same language and to the same place as the first installation.
 
-  `/revref update v3.8.0` ставит конкретную версию, так же делается и откат. Откат на версию до 3.8.0 возможен, но после него `update` недоступен: в таких версиях ещё нет `bin/update.sh`.
-- **Автопроверка.** В начале `init`, `run`, `resume` и `status` агент проверяет, не вышла ли новая версия, не чаще раза в сутки. Если вышла — одна строка в чат с предложением обновиться. Сама проверка ничего не ставит. Отключить проверку: `REVREF_UPDATE_CHECK=off`.
-- **Из терминала** — то же с вопросом `[y/N]`:
+  `/revref update v3.8.0` installs a specific version; a rollback works the same way. A rollback to a version before 3.8.0 is possible, but `update` is unavailable after it: such versions have no `bin/update.sh` yet.
+- **Automatic check.** At the start of `init`, `run`, `resume` and `status` the agent checks whether a new version is out, at most once a day. If it is — one line in the chat suggesting an update. The check itself installs nothing. Disable the check: `REVREF_UPDATE_CHECK=off`.
+- **From a terminal** — the same with a `[y/N]` question:
 
   ```bash
   sh ~/.claude/skills/revref/bin/update.sh
   ```
 
-  Для установки в проект — `sh <проект>/.claude/skills/revref/bin/update.sh`; для установки в DSH — `sh ~/.dsh/skills/revref/bin/update.sh`.
-- **Защита.** Ставятся только релизы — теги `vX.Y.Z` из источника, записанного при установке в файле `INSTALL` (по умолчанию этот репозиторий), никогда не ветка. Коммит релиза сверяется между показом карточки и установкой. Логин и токен из адреса источника в `INSTALL` не сохраняются. Во время работы субагентов обновление не выполняется: агент сначала делает полный чекпоинт. Мажорную версию агент советует ставить между прогонами.
-- **После обновления** перезапустите сессию и выполните `/revref resume`: агент применит разделы «Миграция» к начатому прогону. Если набор установлен в проект и хранится в git, в ветке прогона агент закоммитит обновление отдельным коммитом `revref(kit): …`.
-- **Вручную** — как и для версий до 3.8.0, у которых ещё нет `bin/update.sh`:
+  For a project installation — `sh <project>/.claude/skills/revref/bin/update.sh`; for a DSH installation — `sh ~/.dsh/skills/revref/bin/update.sh`.
+- **Protection.** Only releases are installed — `vX.Y.Z` tags from the source recorded at installation in the `INSTALL` file (this repository by default), never a branch. The release commit is compared between showing the card and installing. A login and token in the source address are not saved in `INSTALL`. The update is not performed while subagents are working: the agent makes a full checkpoint first. The agent recommends installing a major version between runs.
+- **After the update,** restart the session and run `/revref resume`: the agent applies the "Migration" sections to the run in progress. If the kit is installed in the project and kept in git, on the run branch the agent commits the update as a separate `revref(kit): …` commit.
+- **Manually** — as for versions before 3.8.0, which do not have `bin/update.sh` yet:
 
   ```bash
-  git pull && ./install.sh
+  git pull && ./install.sh --lang en
   ```
 
-  Повторная установка сохраняет предыдущую версию скилла рядом с суффиксом `.bak-<дата>`. Конкретную версию можно поставить с тега: `git checkout v3.1.0 && ./install.sh`.
-- Скрипт обновления покрыт тестами: `sh scripts/test_update.sh`.
+  Reinstalling keeps the previous version of the skill next to it with the suffix `.bak-<date>`. A specific version can be installed from a tag: `git checkout v3.1.0 && ./install.sh --lang en`.
+- The update script is covered by tests: `sh scripts/test_update.sh`.
 
-## Состав набора
+## Kit contents
 
 ```text
 revref/
-├── README.md, README.en.md   описание на русском и английском
+├── README.md, README.en.md   description in Russian and English
 ├── CHANGELOG.md, CHANGELOG.en.md
-├── install.sh                установка: macOS, Linux, WSL, Git Bash
-├── install.ps1               установка: Windows PowerShell 5.1, PowerShell 7+
-├── scripts/                  самопроверка набора и тесты (check_kit.py, test_guard.*, test_usage.sh, test_update.sh, test_install.*)
-├── .github/workflows/        проверки в GitHub Actions на Windows, macOS и Linux
-├── agents/                   → ~/.claude/agents/ (русская версия; английская — agents-en/; только Claude Code)
+├── install.sh                installation: macOS, Linux, WSL, Git Bash
+├── install.ps1               installation: Windows PowerShell 5.1, PowerShell 7+
+├── scripts/                  kit self-check and tests (check_kit.py, test_guard.*, test_usage.sh, test_update.sh, test_install.*)
+├── .github/workflows/        checks in GitHub Actions on Windows, macOS and Linux
+├── agents/                   → ~/.claude/agents/ (Russian version; English — agents-en/; Claude Code only)
 │   ├── revref-reviewer.md
 │   ├── revref-verifier.md
 │   └── revref-fixer.md
-├── skill-en/revref/          английская версия скилла (ставится с --lang en)
-└── skill/revref/             → ~/.claude/skills/revref/ или ~/.dsh/skills/revref/ (русская версия)
-    ├── SKILL.md                команды /revref
-    ├── PLATFORMS.md            различия Claude Code и DSH
-    ├── VERSION                 версия набора
-    ├── hooks/guard.sh          сторожевой хук
-    ├── hooks/guard.ps1         запуск хука из PowerShell/DSH
-    ├── hooks/usage.sh          статусная строка: лимиты токенов для оркестратора (Claude Code)
-    ├── bin/update.sh           проверка и установка новой версии (/revref update)
-    ├── ORCHESTRATOR.md         роль и главный цикл оркестратора
-    ├── PIPELINE.md             волны, шаги, ворота, перекрытия, бюджет
-    ├── POLICY.md               классы решений, метки, уровни автономии, git, запреты, остановка
-    ├── PROTOCOLS.md            субагенты, шардирование, параллельность, чекпоинт, возобновление, ответы владельца, остановка для получения ответов владельца (wait), слияние (finish), вопросы в чате (ask)
+├── skill-en/revref/          English version of the skill (installed with --lang en)
+└── skill/revref/             → ~/.claude/skills/revref/ or ~/.dsh/skills/revref/ (Russian version; the English tree has the same layout)
+    ├── SKILL.md                /revref commands
+    ├── PLATFORMS.md            Claude Code vs DSH differences
+    ├── VERSION                 kit version
+    ├── hooks/guard.sh          guard hook
+    ├── hooks/guard.ps1         running the hook from PowerShell/DSH
+    ├── hooks/usage.sh          status line: token limits for the orchestrator (Claude Code)
+    ├── bin/update.sh           checking for and installing a new version (/revref update)
+    ├── ORCHESTRATOR.md         orchestrator role and main loop
+    ├── PIPELINE.md             waves, steps, gates, overlaps, budget
+    ├── POLICY.md               decision classes, labels, autonomy levels, git, prohibitions, stopping
+    ├── PROTOCOLS.md            subagents, sharding, parallelism, checkpoint, resume, owner answers, the `wait` stop for owner answers, merge (finish), questions in chat (ask)
     ├── roles/                  reviewer, verifier, fixer
     ├── prompts/
-    │   ├── common-rules.md     общие правила ревью
-    │   ├── reviews/            QR + 21 специализированное ревью
+    │   ├── common-rules.md     general review rules
+    │   ├── reviews/            QR + 21 specialized reviews
     │   └── work/               verify, verify-fix, plan, fix, final
     └── templates/              CONFIG, STATE, CONTEXT, PLAN, FINDINGS, DECISIONS, INBOX, JOURNAL, report, task, fix-check, custom-review
 ```
 
-## Лицензия
+## License
 
-© 2026 [kesha4](https://github.com/kesha4). Набор распространяется по лицензии [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/deed.ru). Полный текст — в файле [LICENSE](LICENSE).
+© 2026 [kesha4](https://github.com/kesha4). The kit is distributed under the [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/) license. The full text is in the [LICENSE](LICENSE) file.
 
-Можно свободно использовать, копировать, изменять и распространять набор, в том числе в коммерческих целях, при условии указания авторства. Укажите автора, ссылку на репозиторий и лицензию и отметьте, если вносили изменения. Например:
+You may freely use, copy, modify and distribute the kit, including for commercial purposes, provided you give attribution. Credit the author, link to the repository and the license, and indicate if you made changes. For example:
 
-> Основано на [RevRef](https://github.com/kesha4/revref) © kesha4, CC BY 4.0. Изменено.
+> Based on [RevRef](https://github.com/kesha4/revref) © kesha4, CC BY 4.0. Modified.
