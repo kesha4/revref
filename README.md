@@ -138,7 +138,7 @@ powershell -ExecutionPolicy Bypass -File install.ps1 -Lang en
 | `/revref wait` | Stop and wait for owner answers: a full checkpoint, decision cards and a blocking question. In DSH with the Autonomous loop this is the correct stop of the run (only the owner switches the loop itself off); it runs automatically when autonomous work is exhausted |
 | `/revref review <list> [--verify\|--fix] [--optimal]` | One or more selected reviews in a single launch, in queue order (parameters below) |
 | `/revref wave <Wn>` | Run a single wave |
-| `/revref finish` | Merge the result into the `test` branch (test stand): decision review, trial merge, checks, stand checklist; merge and push — each after your "yes" |
+| `/revref finish [<branch>]` | Merge the result into the chosen branch: the target `test` (test stand, by default) or the main `main`/`master`; decision review, trial merge, checks, checklist; merge and push — each after your "yes" |
 | `/revref abandon` | Abandon a started run: archiving of branches and `.revref/` after your "yes", return to the main branch; full deletion — by your commands |
 
 ## Command parameters
@@ -173,9 +173,10 @@ Reviewers look at the diff of these commits and what it affects; each finding is
 | `/revref ask [N\|all\|ID…]` | a number, `all` or decision IDs (`D-015`); can be mixed; `1` by default | How many of the highest-priority questions to show, or which ones |
 | `/revref wait` | *(no arguments)* | Stop for owner answers: checkpoint "stopped: waiting for owner answers", cards and a blocking question; only when autonomous work is exhausted (`PROTOCOLS.md` §13) |
 | `/revref wave <Wn>` | `W0`…`W9` | Run a single pipeline wave, checking its entry conditions |
+| `/revref finish [<branch>]` | `test`, `main` or a branch name; optional | Where to merge the result; without an argument the agent asks (see [Result and merge](#result-and-merge)) |
 | `/revref` | *(no arguments)* | If a run exists — a short status and an offer to `resume`; if not — command help |
 
-`init`, `run`, `resume`, `checkpoint`, `status`, `decisions`, `wait` and `finish` take no parameters. Their behavior is configured in `.revref/CONFIG.md`.
+`init`, `run`, `resume`, `checkpoint`, `status`, `decisions` and `wait` take no parameters. Their behavior is configured in `.revref/CONFIG.md`.
 
 ### Run settings in `CONFIG.md`
 
@@ -192,9 +193,9 @@ Reviewers look at the diff of these commits and what it affects; each finding is
 | Token limit | 95% of the weekly limit | N% of the weekly limit · do not track ([Token limit](#token-limit)) |
 | Autonomous loop (DSH) | not used | not used · yes · no ([DSH autonomous loop](#dsh-autonomous-loop)) |
 | Run branch | `revref/YYYY-MM-DD` | branch name |
-| Main branch | `main` | branch name (the agent does not change it) |
-| Target branch (`finish`) | `test` | branch name |
-| Push | forbidden | forbidden · allowed for the run branch only |
+| Main branch | `main` | branch name; the agent only reads it (the exception is `finish` if the owner chose it as the merge target) |
+| Target branch (`finish`) | `test` | branch name; `test` is the default option in the `finish` question, the second option is the main branch |
+| Push | forbidden | forbidden · allowed for the run branch only; pushing the chosen branch in `finish` is always a separate question |
 | Merge method (`finish`) | ask | merge --no-ff · squash · pull request |
 | `.revref/` on merge (`finish`) | ask | keep · archive · remove |
 | Keep `.revref/` in git | yes | yes · no |
@@ -215,26 +216,27 @@ Reviewers look at the diff of these commits and what it affects; each finding is
 ## Working with git branches
 
 ```text
-main ──────────────────────────────────────────────────────────────  never changed by the agent
+main ──────────────────────────────────────────────────────────────  not changed by the agent by default; the exception is finish when the owner chooses it
   └─► revref/<date>                 run branch: all merged fixes + .revref/
         ├─◄ revref/task/<ID>        fixer task branches (worktree), merged by the orchestrator
         ├── revref/pending/D-NNN    class C decisions — not merged without the owner
         └── tags W<n>, Q<n>-<ID>, final
 revref/archive/<run>/…                 previous runs after a repeated init or abandon
-              └──/revref finish──►  test ──manually, after checking on the stand──►  main
+              ├──/revref finish──►  test (test stand) ──manually, after checking on the stand──►  main
+              └──/revref finish (owner's choice)──►  main
 ```
 
 ### Branches
 
 | Branch | Who creates it and when | Based on | What it contains | What happens next |
 |---|---|---|---|---|
-| `main` (main branch, `CONFIG.Main branch`) | — | — | The run's base | The agent only reads it. If it has moved ahead, it is merged into the run branch on `resume` and in `finish` |
+| `main` (main branch, `CONFIG.Main branch`) | — | — | The run's base | The agent only reads it; the exception is `finish` if the owner chose it as the merge target. If it has moved ahead, it is merged into the run branch on `resume` and in `finish` |
 | `revref/<YYYY-MM-DD>` | `init` (W0) | Current HEAD | All merged fixes, A and B decisions, the `.revref/` state | The source for `finish`; remains afterwards, you delete it |
 | `revref/<YYYY-MM-DD>-q` | `review --fix`, if there is no run or it is finished | Current HEAD | The same for a queue | The same |
 | `revref/archive/<run>/run`, `…/task/<ID>`, `…/pending/D-NNN` | A repeated `init` or `abandon` — by renaming | Branches of the previous run | The whole previous run | Kept for restoring; you delete them |
 | `revref/task/<ID>` | Fixer, one per task | HEAD of the run branch | Commits of a single task | The orchestrator merges it after checks (`merge --no-ff`); merged ones are deleted in `finish` |
 | `revref/pending/D-NNN` | Orchestrator, for a class C decision (or B at the cautious level) | HEAD of the run branch | A ready patch with tests | Merged only after your approval; unapproved ones remain |
-| `test` (target branch, `CONFIG.Target branch`) | — | — | Test stand | `finish` merges into it after your "yes", push — after a separate "yes" |
+| `test` (target branch, `CONFIG.Target branch`) | — | — | Test stand | `finish` merges into it by default after your "yes", push — after a separate "yes" |
 
 ### Commits
 
@@ -258,30 +260,30 @@ Created locally, not pushed automatically.
 |---|---|---|
 | `revref/<date>/W<n>` | Run branch, end of a wave | Rollback point to the state after the wave |
 | `revref/<date>/Q<n>-<ID>` | Run branch, end of a queue item | The same for a queue |
-| `revref/<date>/final` | Run branch before the merge | Full history of the run, including `.revref/`, even if you did not carry it over into `test` |
-| `revref/<date>/merged` | Target branch after the merge | Marks which `test` commit contains the run's result |
+| `revref/<date>/final` | Run branch before the merge | Full history of the run, including `.revref/`, even if you did not carry it over into the chosen branch |
+| `revref/<date>/merged` | Chosen branch after the merge | Marks which commit of the chosen branch contains the run's result |
 | `revref/<date>/archived` | The run's last commit before archiving | Restore point of the run after a repeated `init` or `abandon` |
 
 ### Rules
 
-- **The agent never:**
-  - changes `main`;
-  - force-pushes or rebases published branches;
-  - touches other people's uncommitted changes;
-  - deletes other people's branches and branches of previous runs — it only renames them into the archive.
-- **Push.** The run branch — only if allowed in `CONFIG.md`. The `test` branch — only in `finish` and only after a separate "yes", because this is a deployment to the stand.
+- **The agent does not:**
+  - change `main` (the exception is the merge the owner chose in `finish`);
+  - force-push or rebase published branches;
+  - touch other people's uncommitted changes;
+  - delete other people's branches and branches of previous runs — it only renames them into the archive.
+- **Push.** The run branch — only if allowed in `CONFIG.md`. The chosen branch — only in `finish` and only after a separate "yes": pushing `test` is a deployment to the stand, pushing `main` updates the main branch.
 - **The guard hook** technically blocks violations of these rules during a run, even if the agent makes a mistake (see the "Security" section).
-- **Synchronization — only via merge, not rebase.** `main` is merged into the run branch, while `test` is never merged into the run branch: it may contain other people's unverified changes.
+- **Synchronization — only via merge, not rebase.** `main` is merged into the run branch, while the chosen branch (`test` by default) is never merged into the run branch: it may contain other people's unverified changes.
 - **Rollback:**
   - a wave or a queue — `git revert` of its commit range (boundaries are given by the tags);
   - a single decision — `git revert` of its commits (`git log --grep "D-NNN"`);
-  - the whole result on the stand — `git revert -m 1 <merge commit>` in `test`.
+  - the whole result on the stand — `git revert -m 1 <merge commit>` in the chosen branch (`test` by default).
 
 ## Security
 
 ### Secrets
 
-Reports, decisions and journals from `.revref/` are committed, reach `test` via `finish`, and from there go to `main` and possibly to a public repository. Therefore the values of keys, tokens, passwords and personal data never get into these files, commit messages or the chat. Instead of the value, the agent gives the location, the type and a masked form: `sk-l…9f`.
+Reports, decisions and journals from `.revref/` are committed, reach the chosen branch via `finish` (`test` by default) and, on the usual path, go from there to `main` and possibly to a public repository. Therefore the values of keys, tokens, passwords and personal data never get into these files, commit messages or the chat. Instead of the value, the agent gives the location, the type and a masked form: `sk-l…9f`.
 
 A secret found in the code is a SEC finding of at least High. The agent may remove it from the code itself. Rotating the key and cleaning git history is the owner's decision (class C): the agent cannot rotate the key and does not rewrite history.
 
@@ -295,13 +297,14 @@ The git rules are backed by a technical limiter — the hook `skill-en/revref/ho
 
 | Blocks | Examples |
 |---|---|
-| Changing the main branch | `commit`, `merge`, `reset`, `pull` on `main`; `checkout main && commit` |
+| Changing the main branch — except the merge and push the owner chose in `finish` (the `.revref/FINISH_CONSENT` marker) | `commit`, `merge`, `reset`, `pull` on `main`; `checkout main && commit` |
 | Pushing the main branch, force-push, deleting remote branches | `git push origin main`, `git push -f`, `git push origin +branch`, `git push --delete` |
 | Rewriting history | `git rebase` (except `--abort`), `filter-branch`, `filter-repo` |
 | Losing uncommitted work | `git clean -f`, `git stash drop`, `git checkout -- .`, `git restore .`, `git reset --hard` with changes present, `git branch -D` |
 | Secrets | A secret in a commit message or in lines being added to `.revref/` and `docs/revref/` |
 
 - A blocked command is not executed, and the agent receives an explanation in the run's language.
+- **Consent marker.** The guard hook allows a merge into the main branch and a push of it only with a fresh `.revref/FINISH_CONSENT` marker (`target=<main branch>`, `action=merge|push`, not older than 60 minutes), which `finish` writes after the owner's explicit "yes" and deletes right after the action (`PROTOCOLS.md` §9).
 - Only the owner can disable the hook for a session: the environment variable `REVREF_GUARD=off`.
 - On Windows, Claude Code hooks run through Git Bash. Without Git Bash the hook is inactive, and the rules rely on the policy alone.
 - **DSH:** there are no tool hooks, so automatic blocking is impossible. Before every protected command the agent runs the same check manually: `hooks/guard.ps1 -Command "<command>"` (Windows/PowerShell) or `hooks/guard.sh --check "<command>"` (macOS, Linux, Git Bash). The codes are the same: 0 — allowed, 2 — forbidden, 3 — no way to check. This requires discipline: the `POLICY.md` rules apply regardless of the check (`skill-en/revref/PLATFORMS.md` → "Guard check").
@@ -311,23 +314,27 @@ The git rules are backed by a technical limiter — the hook `skill-en/revref/ho
 
 ```text
 main ──► revref/<date> ──/revref finish──► test (test stand) ──manually, after checking──► main
+                        └──/revref finish (owner's choice)──► main
 ```
 
 A run never merges anything anywhere on its own. The result is the `revref/<date>` branch with the fixes, pending branches with class C decisions, wave tags and `.revref/FINAL_REPORT.md`.
 
-The `/revref finish` command merges the result into the target branch — `test` by default, configurable in `CONFIG.md`. **The agent never changes `main`:** you merge `test` into `main` manually after checking on the stand.
+The `/revref finish [<branch>]` command merges the result into the chosen branch: into the target `test` by default (`CONFIG.Target branch`, usually the test stand), and into the main `main`/`master` only when the owner explicitly chooses it and after a separate "yes". You can give the answer as an argument right away: `/revref finish main`. Choosing the main branch brings a warning: there will be no stand checks between the merge and the main branch, so the checklist is done after the main branch is updated. The default path is unchanged: `finish` merges into `test`, and you update `main` manually after checking on the stand.
 
 `finish` steps:
-1. **Unanswered decisions.** The agent lists them and waits for an answer. You can answer in the chat, including in batch: "D-004 reject, confirm the rest of B". Unapproved behavior changes will not reach the stand. C decisions without an answer are considered rejected for this merge; their branches remain for the future.
-2. **Processing the answers.** What was rejected is reverted together with dependent changes; approved pending branches are merged.
-3. **Synchronization and trial merge.** A fresh `main` is merged into the run branch. Then a trial merge into `test` with checks is performed in a temporary copy. `test` is not merged into the run branch: it may contain other people's unverified changes.
-4. **Summary and checklist.** What will be included and what will be left out, plus **`STAND_CHECKLIST.md`**: what to check on the stand and how, which variables and migrations the stand needs, how to roll back.
-5. **Merge method** (merge, squash or PR into `test`) and what happens to `.revref/`. Remember that everything in `test` will later go to `main`.
-6. **Merge into `test`** locally, after your "yes".
-7. **Push `test`** (triggers the deployment to the stand) — after a separate "yes". Never force.
-8. **Cleanup.** Merged temporary branches are deleted, the `merged` tag is set, and a final message is written with a reminder about the manual merge into `main`.
+1. **Merge target.** The agent asks: the target branch `test` (by default, the stand) or the main branch `main`/`master`; the answer can be given as the argument `/revref finish main`. Merging into the main branch is possible only by an explicit choice and a separate "yes".
+2. **Unanswered decisions.** The agent lists them and waits for an answer. You can answer in the chat, including in batch: "D-004 reject, confirm the rest of B". Unapproved behavior changes will not reach the chosen branch. C decisions without an answer are considered rejected for this merge; their branches remain for the future.
+3. **Processing the answers.** What was rejected is reverted together with dependent changes; approved pending branches are merged.
+4. **Synchronization and trial merge.** A fresh `main` is merged into the run branch. Then a trial merge into the chosen branch (`test` by default) with checks is performed in a temporary copy. `test` is not merged into the run branch: it may contain other people's unverified changes.
+5. **Summary and checklist.** What will be included and what will be left out, plus **`STAND_CHECKLIST.md`**: what to check on the stand and how, which variables and migrations the stand needs, how to roll back.
+6. **Merge method** (merge, squash or PR into the chosen branch) and what happens to `.revref/`. If the target is `test`, remember that everything in it will later go to `main`; if the target is the main branch, the result ends up there right away.
+7. **Merge into the chosen branch** locally, after your "yes".
+8. **Push of the chosen branch** — after a separate "yes": pushing `test` triggers the deployment to the stand, pushing the main branch updates it. Never force.
+9. **Cleanup.** Merged temporary branches are deleted, the `merged` tag is set, and a final message is written with a reminder about the manual merge into `main` if the target was `test`.
 
 If you stop at any step, `finish` can be repeated later from the same point.
+
+The hook allows changing the main branch and pushing it only with a fresh `.revref/FINISH_CONSENT` consent marker (`target=<main branch>`, `action=merge|push`, not older than 60 minutes): `finish` writes it after the owner's explicit "yes" and deletes it right after the action, and also on a stop or checkpoint of the command (`PROTOCOLS.md` §9).
 
 ## A new run and abandoning a run
 

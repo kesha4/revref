@@ -174,25 +174,29 @@ After processing the answers, update the queue at the top of `DECISIONS.md` and 
 
 ## §9. Merging the result (`finish`)
 
-Started only by the owner's command `/revref finish`.
+Started only by the owner's command `/revref finish [<branch>]`.
 
 **Branch scheme:**
 
 ```text
-<main branch, main>  ──►  revref/<date>  ──finish──►  <target branch, test>  ──manually, after checking──►  main
-     (run base)            (run branch)                 (test stand)
+<main branch, main>  ──►  revref/<date>  ──finish──►  <chosen branch>
+     (run base)            (run branch)      ├─ target (CONFIG.Target branch: test by default) — test stand
+                                              └─ main (CONFIG.Main branch: main or master) — when the owner chooses it
 ```
 
-- The target branch is `CONFIG.Target branch`, `test` by default. It is usually synchronized automatically with the test stand.
-- **The agent never changes the main branch.** The owner updates it manually, merging the target branch after a manual check on the stand.
-- **Pushing the target branch triggers a deployment to the stand,** so it is a separate action with a separate confirmation.
+- **Where to merge is the owner's decision.** At the start `finish` asks: the target branch (`CONFIG.Target branch`, `test` by default, usually synced with the test stand) or the main branch (`CONFIG.Main branch`: `main` or `master`). The target branch is the default; the answer can be given right away as an argument: `/revref finish main`. A silent choice of the main branch never happens: without the owner's answer and without the argument the target is the target branch.
+- **`finish` changes the main branch only when the owner explicitly chose it.** The usual path is unchanged: the result is merged into the target branch, and the owner updates the main branch manually by merging the target branch after checking on the stand.
+- **Push is a separate step and a separate "yes".** Pushing the target branch triggers deployment to the stand; pushing the main branch deploys the result to the main branch.
+- **Consent marker.** The guard hook (`hooks/guard.sh`) forbids changing and pushing the main branch. Merging `finish` into the main branch and pushing it are allowed to the hook only with a fresh `.revref/FINISH_CONSENT` marker written after the owner's "yes" (steps 6–7).
 
-Each step ends with an entry in `JOURNAL.md`. When stopping at any step — a full checkpoint, so that `finish` can be repeated later from the same place.
+Each step ends with an entry in `JOURNAL.md`. When stopping at any step — a full checkpoint and removal of `.revref/FINISH_CONSENT`, so that `finish` can be repeated later from the same place.
 
 ### Step 0. Preconditions
 
+- **Choosing the branch.** Ask the owner where to merge the result: into `<CONFIG.Target branch>` (`test` by default, usually the test stand) or into the main branch `<CONFIG.Main branch>` (`main` or `master`). The default is the target branch. The answer can come as the command argument (`/revref finish main`). In DSH — `ask_user_question`, in Claude Code — a regular question in the chat. Record the choice in `STATE.md` (type "ready to merge", field "target") and in `JOURNAL.md`.
+- **The main branch as the target.** Warn in one line: there will be no stand check between the merge and the main branch — the owner goes through the checklist from step 4 after the main branch is updated (or on a stand built from it). From here on "the chosen branch" in this protocol means `<CONFIG.Main branch>`.
+- **The branch exists.** The chosen branch must exist locally or in the remote repository. If it does not — stop and ask the owner. Do not create it and do not substitute another branch for it.
 - **Working tree.** Clean, the current branch is the run branch, the "In progress" section in `STATE.md` is empty. If there is active work — wait for it, or make a checkpoint and report that it must be completed first.
-- **Target branch.** Must exist locally or in the remote repository. If it does not — stop and ask the owner. Do not create it and do not substitute the main branch for it.
 - **Unfinished run** (W9 not passed or the queue not finished). Offer the owner a choice:
   - continue the run;
   - finish with a partial result. In that case first perform a shortened W9: run the checks and `FINAL_REPORT.md` marked "partial result: W0–W<n> completed".
@@ -217,34 +221,38 @@ Each step ends with an entry in `JOURNAL.md`. When stopping at any step — a fu
 
 ### Step 3. Synchronization and trial merge
 
-1. **Updating.** If there is a remote repository — `git fetch` (read-only). For the main and target branches, use the current state: the remote one if the local one is behind.
+1. **Updating.** If there is a remote repository — `git fetch` (read-only). For the main and chosen branches, use the current state: the remote one if the local one is behind.
 2. **Synchronizing with the base.** If the main branch has moved ahead, merge it into the run branch (`git merge`, not rebase).
    - Resolve mechanical conflicts yourself.
    - Conflicts where a behavior has to be chosen go to the owner, as a class B decision with the label `DISPUTED`.
    - Then a full run of the checks: they must be no worse than the baseline. If the checks are red because of the run — stop.
-3. **Do not merge the target branch into the run branch.** The target branch may contain others' unchecked changes. The run branch must stay clean: the main branch plus the run's work.
-4. **Trial merge into the target branch.** In a temporary worktree from the current target branch, run `git merge --no-ff --no-commit <run branch>`.
+3. **Do not merge the chosen branch into the run branch.** It may contain others' unchecked changes. The run branch must stay clean: the main branch plus the run's work.
+4. **Trial merge into the chosen branch.** In a temporary worktree from the current chosen branch, run `git merge --no-ff --no-commit <run branch>`.
    - Conflicts: resolve mechanical ones within this merge; behavioral ones go to the owner.
-   - Run the checks on the result. Failures that exist in the target branch itself even without the run (check on its clean HEAD) are marked as external: they do not block, but they go into the summary.
-   - Save the conflict resolution (`git diff` against the target branch or the unfinished state of the worktree) — it will need to be reproduced in step 6.
-5. **Fixing the point.** Tag `revref/<date>/final` on the run branch. Remember the hash of the target branch on which the trial merge was done.
+   - Run the checks on the result. Failures that exist in the chosen branch itself even without the run (check on its clean HEAD) are marked as external: they do not block, but they go into the summary.
+   - Save the conflict resolution (`git diff` against the chosen branch or the unfinished state of the worktree) — it will need to be reproduced in step 6.
+   - If the target is the main branch, this merge is the rehearsal of the deployment: conflicts and failures matter especially here, and only those present on the clean HEAD of the main branch count as external.
+5. **Fixing the point.** Tag `revref/<date>/final` on the run branch. Remember the hash of the chosen branch on which the trial merge was done.
 
 ### Step 4. Merge summary and stand checklist
 
 Show in the chat and append to `FINAL_REPORT.md` a "Merge" section:
-- what will go into the target branch: number of commits, a `git diff --stat` summary by module, waves and queues;
+- where the result is merged: the chosen branch and why (the target branch by default or the main branch by the owner's choice);
+- what will go into the chosen branch: number of commits, a `git diff --stat` summary by module, waves and queues;
 - behavior changes that will go in: approved B and C, one line each;
 - what was rolled back by owner decision;
 - what will not go in: pending branches without approval, deferred and blocked findings;
-- checks: baseline → run branch → trial merge; external failures of the target branch;
+- checks: baseline → run branch → trial merge; external failures of the chosen branch;
 - conflicts of the trial merge and how they were resolved;
-- warnings: for example, the main or target branch changed during the run.
+- warnings: for example, the main or the chosen branch changed during the run.
 
-Draw up **`.revref/STAND_CHECKLIST.md`** — a checklist for manual checking on the stand, for whoever will check before merging into the main branch:
+Draw up **`.revref/STAND_CHECKLIST.md`** — a checklist for manual checking of the result on the stand:
 - **Behavior changes.** Each change of behavior, UX, contract, business rule, money and data included in the merge: where on the stand, steps to check, expected result, decision ID.
 - **Regression smoke test.** The main user scenarios in the modules that changed the most (per `diff --stat`).
 - **Configuration.** New and changed environment variables, migrations and settings that must be on the stand before deployment. The agent does not run migrations on the stand — it only lists them.
-- **Rollback.** How to roll back if a problem is found on the stand: `git revert -m 1 <merge commit>` in the target branch; targeted rollback of a decision — `git revert <D-NNN commits>`.
+- **Rollback.** How to roll back if a problem is found on the stand: `git revert -m 1 <merge commit>` in the chosen branch; targeted rollback of a decision — `git revert <D-NNN commits>`.
+
+If the target is the main branch, the checklist is still drawn up: there is no manual check between the merge and the main branch, so the check happens after it is updated (or on a stand built from it). Say so in the summary of the step.
 
 ### Step 5. Merge method and the fate of `.revref/`
 
@@ -254,53 +262,68 @@ If not set in `CONFIG.md`, ask the owner about both points.
 
 | Option | When | Comment |
 |---|---|---|
-| **merge --no-ff** (recommended) | By default | One merge commit in the target branch: the whole run is rolled back with a single `revert -m 1`, individual waves and decisions — selectively |
+| **merge --no-ff** (recommended) | By default | One merge commit in the chosen branch: the whole run is rolled back with a single `revert -m 1`, individual waves and decisions — selectively |
 | squash | A compact history is needed | One regular commit; selective rollback by wave is impossible, the history remains in the `final` tag |
-| pull request into the target branch | The project uses review via PRs | Requires pushing the run branch — a separate confirmation; the agent creates the PR but does not merge it |
+| pull request into the chosen branch | The project uses review via PRs | Requires pushing the run branch — a separate confirmation; the agent creates the PR but does not merge it |
 
-**`.revref/`** (keep in mind: everything that goes into the target branch will also go into the main branch on manual merge):
+**`.revref/`** (keep in mind: if the target is the target branch, everything that goes into it will also go into the main branch on manual merge; if the target is the main branch, the result lands there right away):
 
 | Option | What happens |
 |---|---|
 | Keep | The full history of the run is in the repository |
-| Archive (recommended for most projects) | Only `docs/revref/<date>/FINAL_REPORT.md`, `DECISIONS.md` and `STAND_CHECKLIST.md` go into the target branch; the rest is removed by the last commit of the run branch and preserved in the `final` tag |
+| Archive (recommended for most projects) | Only `docs/revref/<date>/FINAL_REPORT.md`, `DECISIONS.md` and `STAND_CHECKLIST.md` go into the chosen branch; the rest is removed by the last commit of the run branch and preserved in the `final` tag |
 | Remove | The last commit of the run branch removes `.revref/` entirely; the working files remain only in the `final` tag |
 
-Before merging, check for secrets everything from `.revref/` and `docs/revref/` that will go into the target branch: from there it will go into the main branch and possibly into a public repository. Mask anything found.
+Before merging, check for secrets everything from `.revref/` and `docs/revref/` that will go into the chosen branch: from there it will go into the main branch (if the target is the target branch) and possibly into a public repository. Mask anything found.
 
 Make the changes for the chosen `.revref/` option in a `revref(finish): …` commit before merging. If they could have affected the checks — repeat the trial merge.
 
 ### Step 6. Confirmation and local merge
 
-1. **Question.** Ask the owner one specific question: "Merge `<run branch>` (N commits) into `<target branch>` using `<method>`? Behavior changes: K, checklist — `STAND_CHECKLIST.md`. The merge is local; nothing goes to the stand yet. Answer 'yes' or 'no'".
-2. **Only "yes" in the chat.** Merging is allowed only after an explicit "yes" in the chat to this question. Any other answer — stop, checkpoint with the status "ready to merge".
-3. **Freshness of the target branch.** Make sure the HEAD of the target branch matches the hash of the trial merge. If not — go back to step 3.4.
-4. **Merge.** Switch to the target branch and merge using the chosen method, reproducing the conflict resolution from the trial merge. Commit message: `revref: run result <date> — <one-line summary>`, with a reference to `FINAL_REPORT` and `STAND_CHECKLIST`.
+1. **Question.** Ask the owner one specific question: "Merge `<run branch>` (N commits) into `<chosen branch>` using `<method>`? Behavior changes: K, checklist — `STAND_CHECKLIST.md`. The merge is local; nothing goes to the stand yet". If the target is the main branch, add: "The main branch will be changed locally; nothing goes to the stand or production until a separate push". Answer 'yes' or 'no'.
+2. **Only "yes" in the chat.** Merging is allowed only after an explicit "yes" in the chat to this question. Any other answer — stop, checkpoint with the status "ready to merge", remove the consent marker.
+3. **Freshness of the chosen branch.** Make sure its HEAD matches the hash of the trial merge. If not — go back to step 3.4.
+4. **Merge.** Switch to the chosen branch and merge using the chosen method, reproducing the conflict resolution from the trial merge. Commit message: `revref: run result <date> — <one-line summary>`, with a reference to `FINAL_REPORT` and `STAND_CHECKLIST`. If the target is the main branch, create the consent marker (see below) right before merging.
 5. **Checks.**
-   - Green (taking external failures into account) → tag `revref/<date>/merged`.
-   - Red → do not fix anything in the target branch. Inform the owner and offer options: undo the local merge just created (`git reset --hard ORIG_HEAD` — only with the owner's consent and only before push) or fix it in the run branch and repeat `finish`.
-6. **Pull request.** Instead of items 3–5: push the run branch (after a separate confirmation), a PR into the target branch with the description from the summary (step 4) and the checklist. Give the PR link to the owner. Do not merge the PR.
+   - Green (taking external failures into account) → tag `revref/<date>/merged`, remove `.revref/FINISH_CONSENT`.
+   - Red → do not fix anything in the main branch. Inform the owner and offer options: undo the local merge just created (`git reset --hard ORIG_HEAD` — only with the owner's consent and only before push; on the main branch the owner does it, the hook blocks such a command) or fix it in the run branch and repeat `finish`. Remove the consent marker.
+6. **Pull request.** Instead of items 3–5: push the run branch (after a separate confirmation), a PR into the chosen branch with the description from the summary (step 4) and the checklist. Give the PR link to the owner. Do not merge the PR.
 
-### Step 7. Pushing the target branch — deployment to the stand
+**Consent marker `.revref/FINISH_CONSENT`:**
 
-1. **A separate question,** even if `CONFIG.Push` allows pushing the run branch: "Push `<target branch>` to `<remote>`? This will trigger synchronization with the test stand. Answer 'yes' or 'no'".
-2. **"Yes"** → `git push <remote> <target branch>` as a regular push, never force. If the push is rejected because the remote branch has moved ahead — do not overwrite it: go back to step 3.4 with the new state.
-3. **"No"** → the merge stays local. Tell the owner how to push manually.
-4. **The state of the stand** is neither checked nor changed by the agent. Checking is done manually, per the checklist.
+```text
+target=main
+action=merge
+```
+
+- The marker is written by the orchestrator, not the owner: right after the explicit "yes" in the chat — at step 6 (`action=merge`) or at step 7 (`action=push`), immediately before the command.
+- `target` is the exact name of the main branch from `CONFIG.Main branch`; `action` is `merge` (the merge and the commit of a squash merge) or `push`.
+- The file is plain UTF-8 text without a BOM (not UTF-16): otherwise the hook will not read it and will block the main branch as usual.
+- The hook accepts a marker no older than 60 minutes; an old marker blocks the main branch again. Force-push, reset, revert, pull, cherry-pick and am on the main branch are not allowed with any marker.
+- Remove the marker right after the action, and also when `finish` stops at any step (together with the checkpoint). Do not commit it to git.
+- The marker does not replace the "yes": it is written only after the owner's answer and lives for one step.
+
+### Step 7. Pushing the chosen branch — deployment
+
+1. **A separate question,** even if `CONFIG.Push` allows pushing the run branch. If the target is the target branch: "Push `<chosen branch>` to `<remote>`? This will trigger synchronization with the test stand. Answer 'yes' or 'no'". If the target is the main branch: "Push the main branch `<chosen branch>` to `<remote>`? This will deploy the result to the main branch. Answer 'yes' or 'no'".
+2. **"Yes"** → `git push <remote> <chosen branch>` with an explicit branch, as a regular push, never force. If the target is the main branch, first create `.revref/FINISH_CONSENT` with `action=push`, and remove it after the push; in the target branch no marker is needed.
+3. If the push is rejected because the remote branch has moved ahead — do not overwrite it: go back to step 3.4 with the new state.
+4. **"No"** → the merge stays local. Tell the owner how to push manually.
+5. **The state of the stand** is neither checked nor changed by the agent. Checking is done manually, per the checklist.
 
 ### Step 8. Completion
 
 1. **Temporary branches.**
    - Delete fully merged task branches `revref/task/*` via `git branch -d` (git will refuse to delete an unmerged one).
    - Do not delete pending branches and the run branch — list them for the owner with a recommendation.
-2. **Final entries.** `STATE.md`: type "run merged into <target branch> <hash>", noting whether push was done (or "PR created <link>"). A `JOURNAL.md` entry of type "merge".
+2. **Final entries.** `STATE.md`: type "run merged into <chosen branch> <hash>", noting whether push was done (or "PR created <link>") and whether the target was the main branch. A `JOURNAL.md` entry of type "merge" with the chosen target. Remove `.revref/FINISH_CONSENT` if it is still there.
 3. **Final message:**
-   - what was merged and where;
-   - whether it was sent to the stand;
+   - what was merged and where (target or main branch);
+   - whether it was sent to the stand or to the main branch;
    - where the checklist is;
    - which decisions remain open (pending branches);
    - how to roll back;
-   - a reminder that merging into the main branch is done manually after checking on the stand.
+   - a reminder that merging into the main branch manually is needed only if the target was the target branch.
 
 ## §10. Questions for the owner in chat (`ask`)
 
@@ -459,7 +482,7 @@ Only the owner runs it. It is not executed on its own, from `run` or because of 
 
 1. **Check.**
    - No `.revref/STATE.md` — say there is nothing to abandon.
-   - The run is already merged (`STATE.md`: "run merged" or "PR created") — `abandon` is not needed: rolling back the merged result is `git revert -m 1 <merge commit>` in the target branch, done manually by the owner.
+   - The run is already merged (`STATE.md`: "run merged" or "PR created") — `abandon` is not needed: rolling back the merged result is `git revert -m 1 <merge commit>` in the chosen branch, done manually by the owner.
    - If `STATE.md` suggests the run may be in progress in another session (§10 → "Where answers are recorded and when they are applied"), warn about it in the card.
 2. **Card in the chat:**
    - the run branch and the number of its commits on top of the main branch; task branches and pending branches;

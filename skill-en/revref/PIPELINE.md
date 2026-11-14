@@ -162,7 +162,7 @@ If the gate is not passed:
    Critical and High found here are fixed through the usual steps; the rest goes into recommendations.
 3. `FINAL_REPORT.md` per `prompts/work/final.md`.
 4. Final checkpoint marked "Run finished".
-5. Message to the owner: where the final report is, how many decisions await approval (by classes C and B), which `revref/pending/*` branches await a decision, what is recommended next. To merge the result into the target branch (`test`), run `/revref finish`. The run itself merges nothing anywhere, and the agent never changes the main branch. In DSH with the autonomous loop, the loop continues the turn after the final message: tell the owner in one line that the loop can be switched off, and do not repeat the final status (`PROTOCOLS.md` §13 → "When there are no more questions").
+5. Message to the owner: where the final report is, how many decisions await approval (by classes C and B), which `revref/pending/*` branches await a decision, what is recommended next. To merge the result, run `/revref finish`: the command will ask where to merge — into the target branch (`test`, by default) or into the main branch (`main`/`master`), do a trial merge and checks, prepare a checklist and merge only after your "yes". The run itself merges nothing; it does not change the main branch unless you chose it as the target. In DSH with the autonomous loop, the loop continues the turn after the final message: tell the owner in one line that the loop can be switched off, and do not repeat the final status (`PROTOCOLS.md` §13 → "When there are no more questions").
 
 ## Review queue (selective run)
 

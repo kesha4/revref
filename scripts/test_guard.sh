@@ -123,6 +123,60 @@ check 2 "$repo" 'git push origin'
 check 0 "$repo" 'git push origin revref/2026-10-13'
 check 0 "$repo" 'git fetch'
 check 0 "$repo" 'git log -1'
+check 2 "$repo" 'git push origin main'
+
+# --- Маркер согласия finish (.revref/FINISH_CONSENT, PROTOCOLS.md §9) ---
+# Без маркера merge, commit и push основной ветки заблокированы — проверено выше.
+# action=merge: слияние и коммит squash-слияния разрешены; push, reset, pull, revert — нет.
+printf 'target=main\naction=merge\n' > "$repo/.revref/FINISH_CONSENT"
+check 0 "$repo" 'git merge --no-ff revref/2026-10-13'
+check 0 "$repo" 'git commit -m "revref: результат"'
+check 2 "$repo" 'git push origin main'
+check 2 "$repo" 'git push origin HEAD:main'
+check 2 "$repo" 'git reset --hard ORIG_HEAD'
+check 2 "$repo" 'git pull'
+check 2 "$repo" 'git revert HEAD'
+check 2 "$repo" 'git rebase main'
+check 0 "$repo" 'git status'
+
+# action=push: push явно указанной основной ветки разрешён; merge, commit, reset и force-push — нет.
+printf 'target=main\naction=push\n' > "$repo/.revref/FINISH_CONSENT"
+check 0 "$repo" 'git push origin main'
+check 0 "$repo" 'git push origin HEAD:main'
+check 0 "$repo" 'git push origin refs/heads/main:refs/heads/main'
+check 2 "$repo" 'git push'
+check 2 "$repo" 'git push origin'
+check 2 "$repo" 'git merge --no-ff revref/2026-10-13'
+check 2 "$repo" 'git commit -m "revref: результат"'
+check 2 "$repo" 'git push --force origin main'
+check 2 "$repo" 'git push origin +main'
+check 2 "$repo" 'git push origin --delete main'
+check 2 "$repo" 'git push --all origin'
+check 2 "$repo" 'git pull'
+check 2 "$repo" 'git reset --hard ORIG_HEAD'
+
+# Маркер с CRLF (как его пишет PowerShell) тоже принимается.
+printf 'target=main\r\naction=merge\r\n' > "$repo/.revref/FINISH_CONSENT"
+check 0 "$repo" 'git merge --no-ff revref/2026-10-13'
+rm -f "$repo/.revref/FINISH_CONSENT"
+
+# Чужой target — согласия нет.
+printf 'target=test\naction=merge\n' > "$repo/.revref/FINISH_CONSENT"
+check 2 "$repo" 'git merge --no-ff revref/2026-10-13'
+check 2 "$repo" 'git push origin main'
+rm -f "$repo/.revref/FINISH_CONSENT"
+
+# Устаревший маркер (mtime старше 60 минут) — согласия нет.
+printf 'target=main\naction=merge\n' > "$repo/.revref/FINISH_CONSENT"
+touch -t 200001010000 "$repo/.revref/FINISH_CONSENT"
+check 2 "$repo" 'git merge --no-ff revref/2026-10-13'
+check 2 "$repo" 'git pull'
+rm -f "$repo/.revref/FINISH_CONSENT"
+
+# После удаления маркера — снова заблокировано.
+check 2 "$repo" 'git merge --no-ff revref/2026-10-13'
+check 2 "$repo" 'git push origin main'
+check 2 "$repo" 'git commit -m x'
 g checkout revref/2026-10-13
 
 # Отключение переменной окружения

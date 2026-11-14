@@ -24,10 +24,10 @@ This file is filled in by the owner. On `init` the agent creates a draft: it ask
 - Token limit: 95% of the weekly limit     <!-- N% of the weekly limit | do not track; pause until the window resets — PIPELINE.md → "Time and token budget" -->
 - Autonomous loop (DSH): not used          <!-- not used — not DSH | no — DSH without the loop | yes — DSH with the "Autonomous loop" mode of dsh-client-auto-continue; see PLATFORMS.md → "DSH autonomous loop" -->
 - Run branch: revref/YYYY-MM-DD
-- Main branch: main                        <!-- the run's base; the agent never changes it -->
-- Target branch (finish): test             <!-- where finish merges the result; usually synced with the test stand -->
-- Push: forbidden                          <!-- forbidden | allowed for the run branch only; pushing the target branch is always a separate question in finish -->
+- Main branch: main                        <!-- the run base; the agent does not change it (exception: finish when the owner explicitly chooses it) -->
+- Target branch (finish): test             <!-- the default option in the finish question; the second option is the main branch (CONFIG.Main branch); usually test is synced with the test stand -->
+- Push: forbidden                          <!-- forbidden | allowed for the run branch only; pushing the chosen branch in finish is always a separate question -->
 - Merge method (finish): ask               <!-- ask | merge --no-ff | squash | pull request -->
-- .revref/ on merge (finish): ask          <!-- ask | keep | archive to docs/revref/<date>/ | remove; note: everything in the target branch will also go into the main branch -->
+- .revref/ on merge (finish): ask          <!-- ask | keep | archive to docs/revref/<date>/ | remove; note: if the target is the target branch, everything will also go into the main branch -->
 - Keep .revref/ in git: yes                <!-- yes — recommended: resume on any machine and in any session -->
 - Report language: English

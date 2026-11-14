@@ -46,7 +46,7 @@ while PLAN.md has unfinished waves:
   before each step and batch of subagents: time budget and token limit (PIPELINE.md)
 
 W9 → FINAL_REPORT.md, final checkpoint, summary message
-merge into the target branch (test) — only via the owner's finish command (PROTOCOLS.md §9); the agent does not change the main branch
+merging into the target branch (test by default) or into the main branch (only when the owner explicitly chooses it) — only via the owner's finish command (PROTOCOLS.md §9); the run itself never changes the main branch
 ```
 
 ## Platform

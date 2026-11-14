@@ -6,6 +6,11 @@
 # stderr) dangerous git commands and committing secrets into .revref/:
 #   - any change of the main branch (commit, merge, rebase, reset, cherry-pick, revert, am, pull on it);
 #   - pushing the main branch (also --all / --mirror), force-push, deleting remote branches;
+#     Exception: merging the result into the main branch and pushing the main branch (an explicitly named
+#     ref, e.g. HEAD:main) are allowed only with a fresh .revref/FINISH_CONSENT marker
+#     (target=…, action=merge|push, at most 60 minutes old), which the agent writes after the owner's
+#     explicit "yes" (PROTOCOLS.md §9); force-push, --delete, --all / --mirror, reset, revert, pull and
+#     the rest stay blocked;
 #   - rebase, filter-branch / filter-repo (history rewriting);
 #   - losing uncommitted work: git clean -f, git stash drop|clear, checkout/restore of the whole tree,
 #     git reset --hard with uncommitted changes, git branch -D;
@@ -223,6 +228,19 @@ main_branch=$(grep -E '^- (Основная ветка|Main branch):' "$state/CO
 lang=ru
 grep -Eq '^- (Main branch|Autonomy level|Report language):' "$state/CONFIG.md" 2>/dev/null && lang=en
 
+# --- finish consent marker: .revref/FINISH_CONSENT, fail closed ---
+# Written by the orchestrator only right after the owner's explicit "yes" in finish (PROTOCOLS.md §9),
+# lives for one step and is removed after it. Format: exactly two lines, target=<main branch> and
+# action=merge|push. Accepted only when the file exists, is not older than 60 minutes and target matches
+# the main branch from CONFIG.md; no find / no marker / stale / target mismatch — no consent.
+consent_target=""; consent_action=""
+consent="$state/FINISH_CONSENT"
+if [ -f "$consent" ] && [ -n "$(find "$consent" -mmin -60 2>/dev/null)" ]; then
+    consent_target=$(sed -n 's/^target=//p' "$consent" 2>/dev/null | head -1 | tr -d '` \r')
+    consent_action=$(sed -n 's/^action=//p' "$consent" 2>/dev/null | head -1 | tr -d '` \r')
+    [ "$consent_target" = "$main_branch" ] || { consent_target=""; consent_action=""; }
+fi
+
 # deny "<ru reason>" "<en reason>"
 deny() {
     if [ "$lang" = en ]; then
@@ -279,9 +297,9 @@ while IFS="$TAB" read -r gd sb args; do
             esac
             dst=${r##*:}; dst=${dst#refs/heads/}
             [ "$r" = HEAD ] && [ "$on_main" = 1 ] && dst=$main_branch
-            [ "$dst" = "$main_branch" ] \
-                && deny "push основной ветки «$main_branch» запрещён: её обновляет владелец вручную." \
-                        "pushing the main branch '$main_branch' is forbidden: the owner updates it manually."
+            [ "$dst" = "$main_branch" ] && [ "$consent_action" != push ] \
+                && deny "push основной ветки «$main_branch» запрещён: её обновляет владелец вручную (исключение — слияние и push, которые владелец выбрал в finish: маркер .revref/FINISH_CONSENT, PROTOCOLS.md §9)." \
+                        "pushing the main branch '$main_branch' is forbidden: the owner updates it manually (exception: the merge and push the owner chose in finish: the .revref/FINISH_CONSENT marker, PROTOCOLS.md §9)."
         done
         if [ -z "$refs" ] && [ "$on_main" = 1 ]; then
             deny "push с основной ветки «$main_branch» без явной ветки отправит основную ветку (папка: $where)." \
@@ -307,12 +325,16 @@ while IFS="$TAB" read -r gd sb args; do
     case "$sb" in
     commit|merge|rebase|reset|cherry-pick|revert|am|pull)
         if [ "$on_main" = 1 ]; then
-            if [ "$known" = 0 ]; then
-                deny "не удалось определить папку команды, а папка сессии — на основной ветке «$main_branch». Укажите папку явно: git -C <путь> $sb … или cd <путь> && git $sb … (путь без переменных оболочки)." \
-                     "cannot tell which folder the command runs in, and the session folder is on the main branch '$main_branch'. Name the folder explicitly: git -C <path> $sb … or cd <path> && git $sb … (a path without shell variables)."
+            if { [ "$sb" = merge ] || [ "$sb" = commit ]; } && [ -n "$consent_target" ] && [ "$consent_action" = merge ]; then
+                : # finish exception: the owner chose the merge into the main branch, the marker is fresh
+            else
+                if [ "$known" = 0 ]; then
+                    deny "не удалось определить папку команды, а папка сессии — на основной ветке «$main_branch». Укажите папку явно: git -C <путь> $sb … или cd <путь> && git $sb … (путь без переменных оболочки; исключение — слияние и push, которые владелец выбрал в finish: маркер .revref/FINISH_CONSENT, PROTOCOLS.md §9)." \
+                         "cannot tell which folder the command runs in, and the session folder is on the main branch '$main_branch'. Name the folder explicitly: git -C <path> $sb … or cd <path> && git $sb … (a path without shell variables; exception: the merge and push the owner chose in finish: the .revref/FINISH_CONSENT marker, PROTOCOLS.md §9)."
+                fi
+                deny "ветка в папке $where — основная («$main_branch»); агент её не меняет (исключение — слияние и push, которые владелец выбрал в finish: маркер .revref/FINISH_CONSENT, PROTOCOLS.md §9)." \
+                     "the branch in folder $where is the main branch ('$main_branch'); the agent never changes it (exception: the merge and push the owner chose in finish: the .revref/FINISH_CONSENT marker, PROTOCOLS.md §9)."
             fi
-            deny "ветка в папке $where — основная («$main_branch»); агент её не меняет." \
-                 "the branch in folder $where is the main branch ('$main_branch'); the agent never changes it."
         fi ;;
     esac
 

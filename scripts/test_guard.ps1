@@ -57,6 +57,27 @@ try {
     $code = Invoke-GuardPs1 'git commit -m "revref(W2): W2-T01"' $repo
     if ($code -eq 0) { Ok 'guard.ps1 allows a commit on the run branch' } else { Bad "guard.ps1 commit returned $code instead of 0" }
 
+    # Finish consent marker (.revref/FINISH_CONSENT, PROTOCOLS.md §9): the main branch opens only for
+    # the merge (action=merge) or the push (action=push) the owner chose; a stale or missing marker blocks.
+    $consent = Join-Path $repo '.revref/FINISH_CONSENT'
+    git -C $repo checkout -q main
+    $code = Invoke-GuardPs1 'git merge --no-ff revref/2026-11-07' $repo
+    if ($code -eq 2) { Ok 'guard.ps1 blocks a merge on the main branch without the marker' } else { Bad "guard.ps1 merge without the marker returned $code instead of 2" }
+    [System.IO.File]::WriteAllText($consent, "target=main`naction=merge`n")
+    $code = Invoke-GuardPs1 'git merge --no-ff revref/2026-11-07' $repo
+    if ($code -eq 0) { Ok 'guard.ps1 allows a merge on the main branch with action=merge' } else { Bad "guard.ps1 merge with action=merge returned $code instead of 0" }
+    $code = Invoke-GuardPs1 'git push origin main' $repo
+    if ($code -eq 2) { Ok 'guard.ps1 still blocks pushing the main branch with action=merge' } else { Bad "guard.ps1 push with action=merge returned $code instead of 2" }
+    [System.IO.File]::WriteAllText($consent, "target=main`naction=push`n")
+    $code = Invoke-GuardPs1 'git push origin main' $repo
+    if ($code -eq 0) { Ok 'guard.ps1 allows pushing the main branch with action=push' } else { Bad "guard.ps1 push with action=push returned $code instead of 0" }
+    $code = Invoke-GuardPs1 'git merge --no-ff revref/2026-11-07' $repo
+    if ($code -eq 2) { Ok 'guard.ps1 blocks a merge with action=push' } else { Bad "guard.ps1 merge with action=push returned $code instead of 2" }
+    Remove-Item -LiteralPath $consent -Force
+    $code = Invoke-GuardPs1 'git merge --no-ff revref/2026-11-07' $repo
+    if ($code -eq 2) { Ok 'guard.ps1 blocks a merge after the marker is removed' } else { Bad "guard.ps1 merge after the marker was removed returned $code instead of 2" }
+    git -C $repo checkout -q revref/2026-11-07
+
     if ($shPath) {
         $prev = $ErrorActionPreference
         $ErrorActionPreference = 'Continue'
